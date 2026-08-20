@@ -63,3 +63,19 @@ def test_documented_relative_paths_exist() -> None:
     )
 
     assert not missing, f"Documented paths do not exist: {missing}"
+
+
+def test_readme_links_every_project_document() -> None:
+    """README is a one-hop entry point for project documentation."""
+    readme_targets = {
+        target.relative_to(REPOSITORY_ROOT).as_posix()
+        for target in _relative_targets(REPOSITORY_ROOT / "README.md")
+    }
+    project_documents = {
+        path.relative_to(REPOSITORY_ROOT).as_posix()
+        for path in _tracked_markdown()
+        if path.parent != REPOSITORY_ROOT / "reference"
+    }
+    missing = sorted((project_documents - {"README.md"}) - readme_targets)
+
+    assert not missing, f"README does not link project documents: {missing}"
