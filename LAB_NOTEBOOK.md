@@ -245,3 +245,22 @@ revised plan was populated; subsequent refinements are recorded explicitly.
   README reachability assertion still covers every sprint document.
 - **Measured:** the README links every non-reference project Markdown document.
 - **Selected / Refined:** kept; H0.3 confirmed.
+
+## M0.4 — CI runs the Gate and reference evaluator
+
+- **Hypothesis:** GitHub Actions has independent quality-gate and baseline
+  reference-evaluator jobs — kind: structural, label:
+  `tests/unit/test_ci_workflow.py` and a GitHub Actions run.
+- **Predicted:** the workflow contains locked sync, the four Gate commands, and
+  baseline generation followed by `reference/evaluator.py`.
+- **Test written:** `tests/unit/test_ci_workflow.py`.
+- **Red observed:** `FileNotFoundError: [Errno 2] No such file or directory:
+  '/Users/m1/Documents/__ai__/trees-packing/.github/workflows/ci.yml'`.
+- **Generated:** test only; workflow pending.
+- **Green observed:** `uv run pytest tests/unit/test_ci_workflow.py` — 1 passed
+  in 0.07s.
+- **Refactored:** none needed; the two workflow jobs mirror the Gate and isolate
+  the reference-evaluator check.
+- **Measured:** local workflow contract is green; remote Actions status is
+  pending until the branch is pushed.
+- **Selected / Refined:** kept locally; CI run pending external publication.
