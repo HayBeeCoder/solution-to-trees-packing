@@ -9,11 +9,11 @@ htmlcov/
 dist/
 data/submissions/*.csv
 
-# Local execution records; never commit these files.
-/DECISIONS.md
-/LAB_NOTEBOOK.md
-/documentary.md
-**/plan.md
+# Optimisation run outputs are reproducible but not versioned individually.
+artifacts/runs/
+artifacts/ledger.json
+artifacts/*.csv
+!artifacts/best_scores.json
 
 challenge-files/
 .DS_Store

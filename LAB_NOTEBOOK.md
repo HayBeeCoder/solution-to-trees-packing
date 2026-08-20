@@ -191,3 +191,19 @@ revised plan was populated; subsequent refinements are recorded explicitly.
   pytest-cov `.coverage` SQLite file and produced an internal coverage-combine
   error after validation assertions passed → erased the generated coverage file,
   serialized the affected pytest run, and obtained 4 passed.
+
+## M0.1 — tracked files must not be ignored
+
+- **Hypothesis:** `.gitignore` can exclude only untracked/generated artifacts;
+  no tracked path will match an ignore rule — kind: structural, label:
+  `tests/unit/test_repo_hygiene.py`.
+- **Predicted:** `git ls-files -ci --exclude-standard` has no output.
+- **Test written:** `tests/unit/test_repo_hygiene.py`.
+- **Red observed:** `AssertionError: Tracked files matched by ignore rules:\nplan.md\nreference/plan.md`.
+- **Generated:** `.gitignore` removes record/plan/sprint ignores and adds only
+  generated run-artifact ignores.
+- **Green observed:** `uv run pytest tests/unit/test_repo_hygiene.py` — 1 passed
+  in 0.09s.
+- **Refactored:** none needed.
+- **Measured:** `git ls-files -ci --exclude-standard` is empty.
+- **Selected / Refined:** kept; H0.1 confirmed.
