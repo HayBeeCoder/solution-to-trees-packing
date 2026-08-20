@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+data/submissions/*.csv
+
+# Local execution records; never commit these files.
+/DECISIONS.md
+/LAB_NOTEBOOK.md
+/documentary.md
+
+challenge-files/
+.DS_Store
