@@ -13,6 +13,7 @@ data/submissions/*.csv
 /DECISIONS.md
 /LAB_NOTEBOOK.md
 /documentary.md
+**/plan.md
 
 challenge-files/
 .DS_Store
