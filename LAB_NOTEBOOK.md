@@ -1,8 +1,8 @@
 # Lab notebook
 
-This ledger applies the “Agentic Coding is Science” workflow from
-`challenge-files/plan-with-agentic-as-science.md`. Each entry states the
-hypothesis, its label, the observed trace, and the selection decision. The
+This ledger applies the “Agentic Coding is Science” workflow from `plan.md`.
+Each entry states the hypothesis, its label, the observed trace, and the
+selection decision. The
 first entries are reconstructed from the work already completed before the
 revised plan was populated; subsequent refinements are recorded explicitly.
 
@@ -28,9 +28,9 @@ revised plan was populated; subsequent refinements are recorded explicitly.
   `reference/christmas_tree_packing_challenge.md`, and `reference/plan.md`.
 - **Observed:** The three supplied source files compare byte-for-byte with their
   copies. At the time this step was first executed, the referenced
-  `sample_solution.csv` was not visible in `challenge-files/`, so it was not
-  invented. A later workspace check found the supplied file in both
-  `challenge-files/` and `reference/`.
+  `sample_solution.csv` was not visible in the local challenge workspace, so it
+  was not invented. A later workspace check found the supplied file under
+  `reference/`.
 - **Measured:** Green for the available reference artifacts.
 - **Selected / Refined:** Selected the copies and recorded the file's actual
   availability at each inspection time rather than fabricating a source of
@@ -207,3 +207,24 @@ revised plan was populated; subsequent refinements are recorded explicitly.
 - **Refactored:** none needed.
 - **Measured:** `git ls-files -ci --exclude-standard` is empty.
 - **Selected / Refined:** kept; H0.1 confirmed.
+
+## M0.2 — documented paths resolve from a clean clone
+
+- **Hypothesis:** Every relative Markdown link and explicit repository path refers
+  to a file available from Git — kind: structural, label:
+  `tests/unit/test_docs_links.py`.
+- **Predicted:** no missing or untracked documented paths.
+- **Test written:** `tests/unit/test_docs_links.py`.
+- **Red observed:** `AssertionError: Documented paths do not exist:
+  ['challenge-files', 'challenge-files/christmas_tree_packing_challenge.md',
+  'challenge-files/evaluator.py', 'challenge-files/plan-with-agentic-as-science.md',
+  'challenge-files/plan.md', 'challenge-files/sample_solution.csv',
+  'challenge-files/simple_algorithm.py']`.
+- **Generated:** test only; documentation repair pending.
+- **Green observed:** `uv run pytest tests/unit/test_docs_links.py` — 1 passed
+  in 3.73s.
+- **Refactored:** the first test version checked only local existence and passed
+  because the local challenge workspace existed outside Git; refined it to
+  require Git tracking.
+- **Measured:** all committed Markdown paths now resolve in a clean clone.
+- **Selected / Refined:** kept; H0.2 confirmed.

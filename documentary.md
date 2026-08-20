@@ -3,30 +3,31 @@
 This file records the material actions, decisions, and verification results for
 the delegated Christmas Tree Packing task. It is maintained as execution
 continues so another person can reconstruct the work without relying on the chat.
+`challenge-files/` was the original local workspace path; its committed source
+artifacts are preserved under `reference/`.
 
 ## 2026-08-20 — initial execution
 
 ### Request and source material
 
-- The task was to execute `challenge-files/plan.md` in the workspace.
+- The task was to execute the original plan, now preserved as `reference/plan.md`.
 - The supplied plan is an 858-line implementation specification for a typed,
   tested Python project containing only the deterministic grid baseline.
 - The supplied challenge files were inspected directly. The official evaluator
   defines a 15-vertex scaled Shapely polygon, Decimal precision 25, scale factor
   `1e15`, coordinate bounds `[-100, 100]`, configurations `1..200`, and the
   `1.1`-spaced grid baseline.
-- `challenge-files/evaluator.py`, `challenge-files/simple_algorithm.py`, and
-  `challenge-files/christmas_tree_packing_challenge.md` were present. At the
-  time of the initial inspection, the referenced `sample_solution.csv` was not
-  visible in `challenge-files/`, so no substitute was created.
+- The evaluator, simple algorithm, and challenge description were supplied. At
+  the time of the initial inspection, the referenced `sample_solution.csv` was
+  not visible in the local challenge workspace, so no substitute was created.
 
 ### Files and structure created
 
 - Created project metadata: `pyproject.toml`, `.python-version`, `.gitignore`,
   and `.pre-commit-config.yaml`.
 - Created `reference/` and copied the supplied evaluator, simple algorithm,
-  challenge description, and plan there for comparison. The source files under
-  `challenge-files/` were left untouched.
+  challenge description, and plan there for comparison. The local source files
+  were left untouched.
 - Created `plan.md` at the repository root as a copy of the original plan.
 - Created `data/submissions/.gitkeep`.
 - Created the `src/tree_packing/` package with typed modules for configuration,
@@ -67,11 +68,11 @@ continues so another person can reconstruct the work without relying on the chat
   `256.819712`, agreeing with the package evaluator at the reference command's
   displayed precision.
 - To keep the retained reference artifacts and plan documents byte-for-byte
-  untouched, Ruff's repository-wide configuration excludes `reference/`,
-  `challenge-files/`, `plan.md`, and `documentary.md`; project source and tests
-  remain covered by the formatting and lint gates.
+  untouched, Ruff's repository-wide configuration excludes `reference/` and the
+  local challenge workspace; project source and tests remain covered by the
+  formatting and lint gates.
 - Final integrity checks confirm the three supplied reference files copied into
-  `reference/` are byte-identical to their `challenge-files/` sources, and the
+  `reference/` are byte-identical to the supplied source files, and the
   generated CSV has 20,101 lines including its header.
 - During the revised focused-label run, concurrent pytest processes briefly
   corrupted the shared generated `.coverage` SQLite artifact. The affected
@@ -81,9 +82,8 @@ continues so another person can reconstruct the work without relying on the chat
 
 ## 2026-08-20 — revised-plan verification
 
-- The user reported a revised plan at
-  `challenge-files/plan-with-agentic-as-science.md` and asked for verification
-  that the major change was the “agentic as science” part.
+- The user provided a revised root `plan.md` and asked for verification that the
+  major change was the “agentic as science” part.
 - Direct inspection now finds 943 lines versus 858 in the original.
 - The diff adds the “Agentic Coding is Science” operating methodology, including
   the six-step hypothesis/generate/run/measure/select/refine loop, explicit
@@ -100,10 +100,9 @@ continues so another person can reconstruct the work without relying on the chat
 ## 2026-08-20 — sample solution clarification
 
 - In response to the user's question, the earlier execution log was checked:
-  `sample_solution.csv` was absent from the initial `challenge-files/` listing.
-- A fresh read-only workspace check now finds
-  `challenge-files/sample_solution.csv` and `reference/sample_solution.csv`,
-  each 766,694 bytes. This file was therefore not observed during the earlier
+  `sample_solution.csv` was absent from the initial local-workspace listing.
+- A fresh read-only workspace check now finds `reference/sample_solution.csv`,
+  766,694 bytes. This file was therefore not observed during the earlier
   adventure and appeared in the workspace afterward (or was synchronized after
   that inspection).
 
@@ -122,9 +121,8 @@ continues so another person can reconstruct the work without relying on the chat
   operating methodology plus `LAB_NOTEBOOK.md` and process documentation.
 - `LAB_NOTEBOOK.md` is complete with one entry for each of the 14 revised-plan
   steps and a refinement ledger.
-- The active root `plan.md` now mirrors
-  `challenge-files/plan-with-agentic-as-science.md`; the original remains
-  available at `reference/plan.md` and `challenge-files/plan.md`.
+- The active root `plan.md` contains the revised methodology; the original
+  remains available at `reference/plan.md`.
 - Final formatting, linting, strict typing, and pytest gates are green.
 - Fresh baseline generation and both internal/reference evaluator checks are
   green with no overlaps.

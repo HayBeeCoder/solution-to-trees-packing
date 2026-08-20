@@ -25,9 +25,9 @@ There are two closely related systems in the folder:
 
 ```text
 Challenge source material
-  challenge-files/christmas_tree_packing_challenge.md
-  challenge-files/evaluator.py
-  challenge-files/simple_algorithm.py
+  reference/christmas_tree_packing_challenge.md
+  reference/evaluator.py
+  reference/simple_algorithm.py
           |
           | retained unchanged for comparison
           v
@@ -300,17 +300,17 @@ important guard against subtle errors such as:
 | [`reference`](reference) | retained evaluator, challenge text, algorithm, and sample CSV |
 | [`tests`](tests) | unit, integration, and reference-parity tests |
 | [`data/submissions`](data/submissions) | generated submissions; CSVs are ignored |
-| [`challenge-files`](challenge-files) | original challenge and planning artifacts present in the workspace |
+| [`reference`](reference) | original challenge artifacts retained unchanged for comparison |
 | [`pyproject.toml`](pyproject.toml) | package metadata, dependencies, CLI entry point, and tool configuration |
 | [`uv.lock`](uv.lock) | resolved dependency versions for reproducible setup |
 | [`.python-version`](.python-version) | declares Python 3.12 |
 | [`.pre-commit-config.yaml`](.pre-commit-config.yaml) | Ruff and mypy hooks |
 | [`README.md`](README.md) | concise setup and command runbook |
 
-There are also local process records—`DECISIONS.md`, `LAB_NOTEBOOK.md`, and
+There are also process records—`DECISIONS.md`, `LAB_NOTEBOOK.md`, and
 `documentary.md`—that explain how the repository was built and verified. They
-are intentionally ignored by Git. The `challenge-files/` directory contains
-the input artifacts and planning documents rather than runtime package code.
+are versioned alongside the code. The `reference/` directory contains the input
+artifacts rather than runtime package code.
 
 ## 5. Module-by-module implementation
 
@@ -728,8 +728,7 @@ The retained plans explain why the package has this shape:
 - [`reference/plan.md`](reference/plan.md) is the original scaffolding plan.
 - The root [`plan.md`](plan.md) is the revised plan, including the
   “agentic coding is science” hypothesis/test/refinement workflow.
-- `challenge-files/plan-with-agentic-as-science.md` is the corresponding source
-  artifact.
+- `reference/plan.md` preserves the original scaffolding plan for comparison.
 - [`DECISIONS.md`](DECISIONS.md), [`LAB_NOTEBOOK.md`](LAB_NOTEBOOK.md), and
   [`documentary.md`](documentary.md) record design decisions and verification
   history locally.
