@@ -228,3 +228,20 @@ revised plan was populated; subsequent refinements are recorded explicitly.
   require Git tracking.
 - **Measured:** all committed Markdown paths now resolve in a clean clone.
 - **Selected / Refined:** kept; H0.2 confirmed.
+
+## M0.3 — README is the documentation entry point
+
+- **Hypothesis:** Every project Markdown document is reachable directly from
+  `README.md` — kind: structural, label: `tests/unit/test_docs_links.py`.
+- **Predicted:** the README has no missing one-hop project-document links.
+- **Test written:** `tests/unit/test_docs_links.py`.
+- **Red observed:** `AssertionError: README does not link project documents:
+  ['baseline-breakdown.md', 'documentary.md', 'plan.md']`.
+- **Generated:** test only; documentation map pending.
+- **Green observed:** `uv run pytest tests/unit/test_docs_links.py` — 2 passed
+  in 3.55s.
+- **Refactored:** excluded prospective Sprint 2 plans from present-state code-path
+  checks because they intentionally name modules scheduled for M1–M6; the
+  README reachability assertion still covers every sprint document.
+- **Measured:** the README links every non-reference project Markdown document.
+- **Selected / Refined:** kept; H0.3 confirmed.

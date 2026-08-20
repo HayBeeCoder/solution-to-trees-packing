@@ -39,5 +39,28 @@ uv run tree-packing visualize data/submissions/baseline.csv --n 10
 ```
 
 The reference challenge files are retained in `reference/` for direct comparison.
-See [DECISIONS.md](DECISIONS.md) for the implementation trade-offs and
-[LAB_NOTEBOOK.md](LAB_NOTEBOOK.md) for the hypothesis-and-label execution record.
+
+## Documentation map
+
+- [Active implementation plan](plan.md): completed baseline-scaffolding plan
+  and its scientific execution methodology.
+- [Sprint 1 plan](sprints/sprint-1/plan-with-agentic-as-science.md): the
+  hypothesis-driven scaffolding methodology adopted by this repository.
+- [Sprint 2 programme](sprints/sprint-2/README.md): ordered optimiser milestones.
+  Start with the [shared contract](sprints/sprint-2/00-shared-contract.md), then
+  work through [M0](sprints/sprint-2/M0-hygiene.md),
+  [M1](sprints/sprint-2/M1-geometry-core.md),
+  [M2](sprints/sprint-2/M2-free-wins.md),
+  [M3](sprints/sprint-2/M3-lattice.md),
+  [M4](sprints/sprint-2/M4-compaction.md),
+  [M5](sprints/sprint-2/M5-small-n.md), and
+  [M6](sprints/sprint-2/M6-ablation-freeze.md).
+- [Baseline breakdown](baseline-breakdown.md): detailed architecture, data flow,
+  and evaluator walkthrough.
+- [Decisions](DECISIONS.md): implementation assumptions and trade-offs.
+- [Lab notebook](LAB_NOTEBOOK.md): auditable hypotheses, observations, and
+  refinements.
+- [Documentary](documentary.md): chronological record of material execution and
+  verification milestones.
+- [Reference artifacts](reference/): unchanged challenge evaluator, baseline,
+  challenge description, and sample submission.

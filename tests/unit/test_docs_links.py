@@ -10,6 +10,7 @@ REPOSITORY_ROOT = Path(__file__).parents[2]
 MARKDOWN_LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 INLINE_PATH = re.compile(r"`([\w./-]+\.(?:md|py|csv|toml))`")
 GENERATED_PREFIXES = ("artifacts/", "data/submissions/")
+PROSPECTIVE_DOCUMENT_PREFIX = "sprints/"
 
 
 def _tracked_markdown() -> list[Path]:
@@ -52,10 +53,13 @@ def _is_tracked(path: Path) -> bool:
 
 
 def test_documented_relative_paths_exist() -> None:
-    """Every tracked Markdown link and repository path points at a real file."""
+    """Present-state docs link only to clean-clone files, not future milestones."""
     missing = sorted(
         relative_path
         for document in _tracked_markdown()
+        if not document.relative_to(REPOSITORY_ROOT)
+        .as_posix()
+        .startswith(PROSPECTIVE_DOCUMENT_PREFIX)
         for target in _relative_targets(document)
         if (relative_path := target.relative_to(REPOSITORY_ROOT).as_posix())
         and not relative_path.startswith(GENERATED_PREFIXES)
