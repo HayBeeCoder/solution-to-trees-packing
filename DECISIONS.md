@@ -10,8 +10,8 @@ so the internal gatekeeper cannot silently disagree with the official evaluator.
 
 M1 splits the flat geometry and validation modules into sub-packages so the
 search-only fast path stays out of the authoritative validation path.
-`geometry/fast.py` exists for search acceleration only; `validation/` imports
-`geometry.core` and never the fast path. The run ledger is derived from stored
+`src/tree_packing/geometry/fast.py` exists for search acceleration only; `src/tree_packing/validation/`
+imports `src/tree_packing/geometry/core.py` and never the fast path. The run ledger is derived from stored
 runs, not hand-edited, and it rejects experiment runs and layouts below the
 clearance floor even if their score is attractive.
 

@@ -552,18 +552,18 @@ then runs the overlap check.
 
 M1 reorganizes the baseline into a small package hierarchy:
 
-- `geometry/core.py` is the authoritative polygon builder.
-- `geometry/fast.py` is a search-only NumPy path and must not replace
+- `src/tree_packing/geometry/core.py` is the authoritative polygon builder.
+- `src/tree_packing/geometry/fast.py` is a search-only NumPy path and must not replace
   validation.
-- `geometry/decomposition.py` holds the exact four-piece convex split.
-- `geometry/neighbours.py` enumerates short lattice translations after basis
+- `src/tree_packing/geometry/decomposition.py` holds the exact four-piece convex split.
+- `src/tree_packing/geometry/neighbours.py` enumerates short lattice translations after basis
   reduction.
-- `validation/overlap.py` keeps the structural submission checks.
-- `validation/clearance.py` reports the minimum pairwise separation.
-- `validation/gatekeeper.py` reads a written CSV back from disk and combines
+- `src/tree_packing/validation/overlap.py` keeps the structural submission checks.
+- `src/tree_packing/validation/clearance.py` reports the minimum pairwise separation.
+- `src/tree_packing/validation/gatekeeper.py` reads a written CSV back from disk and combines
   structure, overlap, and clearance checks.
-- `optimize/types.py` defines frozen placement and layout records.
-- `optimize/ledger.py` stores immutable runs and derives the ledger as a
+- `src/tree_packing/optimize/types.py` defines frozen placement and layout records.
+- `src/tree_packing/optimize/ledger.py` stores immutable runs and derives the ledger as a
   filtered arg-min.
 
 The split is the concrete enforcement point for the two-tier geometry rule:
