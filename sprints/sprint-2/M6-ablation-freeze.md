@@ -130,8 +130,14 @@ labelled preliminary.
 - **Label:** execution on a fresh clone in a clean container.
 - **Falsified if:** the score differs, or any documented command fails.
 
-This is the last gate before submission and the one most likely to fail, because it exercises
-every assumption about the environment that local development hides.
+This repeats M0's H0.4 against the finished system. M0 catches environment defects on day
+one; this catches ones introduced since. It is the last gate before submission and the one
+most likely to fail, because it exercises every assumption about the environment that local
+development hides.
+
+Run it in a container or a fresh user account, not just a fresh directory — a sibling
+directory on the same machine still inherits your caches, your `PATH`, and your globally
+installed tools.
 
 ---
 

@@ -9,26 +9,27 @@ baseline; it does not implement an optimizer.
 Install [uv](https://docs.astral.sh/uv/) and use Python 3.12 or newer:
 
 ```bash
-uv sync
-uv run pre-commit install
+uv sync --locked
+uv run pre-commit install --hook-type pre-push
 ```
 
 Run the quality gates:
 
 ```bash
-uv run ruff format .
-uv run ruff check .
-uv run mypy src
-uv run pytest
+make gate
 ```
 
 Generate and evaluate the baseline:
 
 ```bash
-uv run tree-packing generate --output data/submissions/baseline.csv
-uv run tree-packing evaluate data/submissions/baseline.csv
-uv run python reference/evaluator.py data/submissions/baseline.csv
+make baseline
+make verify
 ```
+
+`make verify` runs the quality gate, generates the baseline, checks it with the
+package evaluator, then checks the written CSV with the official evaluator.
+Use `make coverage` when a coverage report is needed; normal test runs do not
+write shared coverage state.
 
 The generated CSV contains 20,100 rows, covering every configuration from one
 through 200 trees. The optional visualization command requires the extra:

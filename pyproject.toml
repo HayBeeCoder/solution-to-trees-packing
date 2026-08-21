@@ -46,6 +46,7 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "PTH", "RUF"]
 
 [tool.ruff.format]
 quote-style = "double"
+exclude = ["*.md"]
 
 [tool.mypy]
 python_version = "3.12"

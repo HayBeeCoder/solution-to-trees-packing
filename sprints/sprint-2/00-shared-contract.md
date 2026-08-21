@@ -301,7 +301,8 @@ uv run lint-imports          # added M1
 uv run pytest                # coverage moved to a separate target; see M0
 ```
 
-**The Regression Gate** (added M2, run in CI on every push):
+**The Regression Gate** (content added M2; plumbing from M0). Runs behind `make verify`
+and is enforced by a local `pre-push` hook. Hosted CI is optional — see M0's appendix:
 
 ```bash
 uv run tree-packing solve --output artifacts/current.csv

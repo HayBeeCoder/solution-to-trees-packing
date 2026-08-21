@@ -132,18 +132,26 @@ re-run rotation.
 Run both directions and let the ledger take the arg-min. Insertion and the ratchet find
 different things.
 
-### H2.6 — The regression gate makes the score monotone across the project
+### H2.6 — The regression ratchet makes the score monotone across the project
 
 - **Kind:** structural
-- **Predicted:** CI fails on a deliberately introduced score regression.
-- **Label:** manual falsification — push a branch with a worsened constant, confirm CI red,
-  revert.
-- **Falsified if:** CI passes with the regression present.
+- **Predicted:** `make verify` fails, and the `pre-push` hook refuses the push, on a
+  deliberately introduced score regression.
+- **Label:** manual falsification — worsen a constant, run `make verify`, attempt a push,
+  confirm both refuse; revert.
+- **Falsified if:** either passes with the regression present.
 
-Commit `artifacts/best_scores.json` with M2's per-configuration terms and total. Wire the
-Regression Gate (shared contract §4) into the CI job created in M0. Perform the
-falsification check and record it. From this milestone on, the total score can never
-silently increase — which is what protects M3–M5 from late refactors.
+Commit `artifacts/best_scores.json` with M2's per-configuration terms and total, then fill
+in the Regression Gate content (shared contract §4) behind `make verify`. The `pre-push`
+plumbing already exists from M0's H0.4b; this milestone gives it something to check.
+
+From here on the total score can never silently increase — which is what protects M3–M5
+from a late refactor quietly costing points that nobody notices until submission.
+
+Local hooks are sufficient and hosted CI is not required. If Actions was added under M0's
+optional appendix, wire `make verify` into it too, but the hook remains the authority: a
+hook that refuses the push is stronger than a job that reports failure after the push has
+landed.
 
 ---
 
@@ -155,7 +163,8 @@ silently increase — which is what protects M3–M5 from late refactors.
 - [ ] Minimum clearance ≥ `CLEARANCE_EPS` for all 200 configurations.
 - [ ] `n = 1` term is exactly `0.66125`.
 - [ ] Monotonicity `s_n ≤ s_{n+1}` holds for all `n`.
-- [ ] `artifacts/best_scores.json` committed; Regression Gate live in CI and falsified once.
+- [ ] `artifacts/best_scores.json` committed; Regression Gate live behind `make verify`,
+      enforced by the `pre-push` hook, and falsified once.
 - [ ] Zero-growth insertion count recorded in the notebook.
 - [ ] **TDD audit:** every structural sub-hypothesis has a `test(...)` commit preceding its
       `feat(...)` commit, and a `Red observed` field in `LAB_NOTEBOOK.md`.

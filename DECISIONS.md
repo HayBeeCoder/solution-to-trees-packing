@@ -38,3 +38,16 @@ The implementation is tracked as hypothesis → generate → run/observe → mea
 `LAB_NOTEBOOK.md` records the hypotheses, traces, failures, and corrections so
 the work is reviewable as a falsifiable engineering process rather than an
 unexplained sequence of edits.
+
+## M0 hygiene and reproducibility
+
+The briefly introduced hosted CI workflow was reverted. The deliverable is
+reviewed from a Drive folder, so a reviewer cannot rely on its remote Actions
+history. A clean-room clone and a local `pre-push` hook running `make verify`
+test the practical risks directly.
+
+Ignore rules now describe only generated artifacts; committed decisions,
+notebook, documentary, and plans remain visible. Pytest coverage is opt-in via
+`make coverage`, preventing concurrent default test runs from competing for the
+same `.coverage` file. The Makefile is intentionally a thin wrapper around the
+existing `uv run` commands, keeping the README runbook and local hook aligned.

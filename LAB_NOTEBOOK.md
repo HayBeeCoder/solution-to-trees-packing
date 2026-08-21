@@ -245,3 +245,84 @@ revised plan was populated; subsequent refinements are recorded explicitly.
   README reachability assertion still covers every sprint document.
 - **Measured:** the README links every non-reference project Markdown document.
 - **Selected / Refined:** kept; H0.3 confirmed.
+
+## M0.0 — hosted CI deferred
+
+- **Hypothesis:** hosted CI would add reviewer-visible evidence of a green gate
+  — kind: structural, label: repository CI configuration and clean-room gate.
+- **Predicted:** no workflow remains after rollback and no unrelated work is
+  lost.
+- **Red observed:** `./.github/workflows/ci.yml` existed in the two isolated
+  tip commits; it was the expected evidence that the superseded implementation
+  needed removal.
+- **Generated:** reverted `8be1a8c` and `2fc486e` as `20de892` and `1aa09d4`.
+- **Green observed:** no tracked workflow path remains after the reversions.
+- **Refactored:** none needed.
+- **Measured:** hosted CI is not visible in the Drive deliverable; a clean-room
+  clone and local hook exercise the relevant environment risk directly.
+- **Selected / Refined:** refuted on re-examination; CI deferred in favour of
+  H0.4 clean-room reproduction and H0.4b local verification.
+
+## M0.4b — local pre-push verification hook
+
+- **Hypothesis:** a pre-push hook invokes `make verify` — kind: structural,
+  label: `tests/unit/test_pre_push_hook.py`.
+- **Predicted:** the hook configuration names `make verify` at the `pre-push`
+  stage.
+- **Test written:** `tests/unit/test_pre_push_hook.py`.
+- **Red observed:** `AssertionError: assert 'entry: make verify' in
+  configuration`.
+- **Generated:** `.pre-commit-config.yaml` local `verify` hook.
+- **Green observed:** four focused M0 tests passed in 0.47s.
+- **Refactored:** none needed.
+- **Measured:** hook configuration expands to the full verification target.
+- **Selected / Refined:** kept; H0.4b confirmed. Mutation spot-check: added a
+  temporary first `forced_failure` prerequisite, then ran
+  `pre-commit run verify --hook-stage pre-push --all-files`; the hook failed
+  with `make: *** [forced_failure] Error 1`. Removed the mutation immediately.
+
+## M0.5 — coverage is opt-in
+
+- **Hypothesis:** default pytest execution does not enable coverage — kind:
+  structural, label: `tests/unit/test_pytest_configuration.py`.
+- **Predicted:** `--cov` is absent from default pytest options.
+- **Test written:** `tests/unit/test_pytest_configuration.py`.
+- **Red observed:** `AssertionError: assert '--cov' not in '-ra -q --cov=tree_packing --cov-report=term-missing'`.
+- **Generated:** `pyproject.toml` default options and dedicated coverage target.
+- **Green observed:** four focused M0 tests passed in 0.47s.
+- **Refactored:** none needed.
+- **Measured:** ordinary pytest runs no longer create `.coverage`.
+- **Selected / Refined:** kept; H0.5 confirmed.
+
+## M0.6 — one Makefile runbook
+
+- **Hypothesis:** the documented quality targets are available through Make —
+  kind: structural, label: `tests/unit/test_makefile.py`.
+- **Predicted:** `make --dry-run` expands `gate`, `baseline`, `verify`, and
+  `coverage`.
+- **Test written:** `tests/unit/test_makefile.py`.
+- **Red observed:** `make: *** No rule to make target 'gate'. Stop.`
+- **Generated:** `Makefile` thin wrappers around `uv run` commands.
+- **Green observed:** four focused M0 tests passed in 0.47s.
+- **Refactored:** none needed.
+- **Measured:** `make --dry-run verify` lists Ruff, mypy, pytest, both
+  evaluators, and baseline generation in order.
+- **Selected / Refined:** kept; H0.6 confirmed.
+
+## M0.7 — remove CLI lint noise
+
+- **Hypothesis:** overlap reporting maintains one shared error collection —
+  kind: structural, label: `tests/unit/test_cli_reporting.py`.
+- **Predicted:** direct append is used and the summary count uses
+  `overlap_errors`.
+- **Test written:** `tests/unit/test_cli_reporting.py`.
+- **Red observed:** `AssertionError: assert 'overlap_errors.append((n, len(pairs)))' in source`.
+- **Generated:** `src/tree_packing/cli.py` cleanup and Ruff exclusion cleanup.
+- **Green observed:** four focused M0 tests passed in 0.47s.
+- **Refactored:** removed inert Markdown exclusions and excluded the `plans`
+  directory instead. The full gate then showed that Ruff's formatter, unlike
+  its linter, does process Python snippets in Markdown. Excluded Markdown from
+  formatting only so source/test formatting remains enforced without rewriting
+  preserved plans and documentation.
+- **Measured:** focused reporting regression test passes.
+- **Selected / Refined:** kept; H0.7 confirmed.

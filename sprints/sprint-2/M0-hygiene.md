@@ -1,8 +1,9 @@
-# M0 — Submission surface, CI, and quality gates
+# M0 — Submission surface, reproducibility, and quality gates
 
 **Score target:** `256.8197122633766779770234` — unchanged.
 **Tag on completion:** `v0.2-hygiene`
 **Estimated effort:** half a day.
+**Start with H0.0** — roll back the in-progress CI work before anything else.
 
 Read `00-shared-contract.md` first.
 
@@ -20,12 +21,96 @@ M0 changes no algorithm and must change no output. Its exit gate asserts the sco
 
 ---
 
+## H0.0 — Roll back the in-progress CI work
+
+**Do this before anything else in M0.** Work on GitHub Actions was started under a previous
+version of this plan. Continuous integration is now **optional and deferred** — see
+"Optional: GitHub Actions" below for the conditions under which it is worth revisiting.
+
+- **Kind:** structural
+- **Predicted:** after the rollback, no CI configuration remains, the Gate is green, and the
+  score is unchanged.
+- **Label:** `git status` clean, `find . -name '*.yml' -path '*workflow*'` empty, score
+  unchanged.
+- **Falsified if:** any unrelated work is lost in the rollback.
+
+### Step 1 — find out what exists
+
+Do not delete blind. Establish the actual state first:
+
+```bash
+git status --porcelain
+git log --oneline -n 10
+git ls-files | grep -E '^\.github/|workflow|ci\.ya?ml'
+ls -la .github/workflows/ 2>/dev/null
+git diff HEAD --stat
+```
+
+### Step 2 — choose the rollback that matches the state
+
+**If the CI work is uncommitted** (still in the working tree):
+
+```bash
+git checkout -- .github 2>/dev/null || true
+rm -rf .github
+git status --porcelain          # confirm nothing else was touched
+```
+
+**If the CI work is committed and is the most recent commit** — keep the changes on disk so
+anything useful can be salvaged, then discard:
+
+```bash
+git log -1 --stat               # confirm the commit contains ONLY CI files
+git reset --soft HEAD~1         # undo the commit, keep files staged
+git restore --staged .github
+rm -rf .github
+```
+
+**If the CI commit is not the tip**, or is mixed with wanted work — revert rather than
+rewrite, so no other commit is disturbed:
+
+```bash
+git revert --no-commit <ci-sha>
+git commit -m "revert: defer CI setup; clean-room reproduction replaces it (H0.0)"
+```
+
+**If it was already pushed**, always use `git revert`. Do not force-push — rewriting shared
+history costs more than the commit is worth, and a clean revert with a stated reason reads
+better to a reviewer than a hole in the history.
+
+### Step 3 — remove the follow-on traces
+
+```bash
+grep -rn "actions/\|workflow\|badge\|CI\b" README.md DECISIONS.md documentary.md \
+  LAB_NOTEBOOK.md 2>/dev/null
+```
+
+Delete any CI badge from `README.md` and any runbook step referencing Actions. If
+`.pre-commit-config.yaml` gained CI-only hooks, remove those but **keep** the `pre-push`
+stage — H0.4b needs it.
+
+### Step 4 — record it honestly
+
+Add a `LAB_NOTEBOOK.md` entry. This is a REFINE trace, and it is worth keeping rather than
+erasing:
+
+> **M0.0 — CI deferred.** Hypothesis: hosted CI provides reviewer-visible evidence of a
+> green gate. **Refuted on re-examination**: the deliverable is a Drive folder, so Actions
+> history is not visible to the reviewer, and the actual risk — environment assumptions
+> that only hold locally — is addressed by clean-room reproduction (H0.4) and a local
+> `pre-push` hook (H0.4b). Reverted `<sha>`. Cost: `<time spent>`.
+
+A recorded decision that was reversed for a stated reason is stronger interview evidence
+than one that was never questioned.
+
+---
+
 ## H0 — Primary hypothesis
 
-> The repository can be made fully self-describing and CI-verified from a clean clone,
+> The repository can be made fully self-describing and reproducible from a clean clone,
 > without altering a single placement in the generated submission.
 
-**Label:** the Gate is green, CI passes on a clean checkout, and
+**Label:** the Gate is green, a clean-room clone reproduces the score, and
 `uv run tree-packing evaluate` reports exactly `256.8197122633766779770234`.
 
 ---
@@ -90,17 +175,45 @@ Add a "Documentation map" section to `README.md` with a one-line description of 
 document's purpose and audience. `baseline-breakdown.md` is 1,122 lines and currently
 unreachable from the entry point — it is the most substantial artefact in the repository.
 
-### H0.4 — The Gate runs in CI on a clean checkout
+### H0.4 — The repository reproduces in a clean room, today
 
 - **Kind:** structural
-- **Predicted:** a GitHub Actions workflow passes on `main` in under five minutes.
-- **Label:** a green Actions run.
-- **Falsified if:** any gate step fails, or the run exceeds ten minutes.
+- **Predicted:** a fresh `git clone` into an empty directory, followed by `uv sync --locked`
+  and `make verify`, reproduces `256.8197122633766779770234` on the first attempt.
+- **Label:** the score printed by the clean-room run.
+- **Falsified if:** any documented command fails, or the score differs by any amount.
 
-Create `.github/workflows/ci.yml`: checkout, install `uv`, `uv sync --locked`, then the
-Gate. Add a second job that runs `uv run tree-packing generate` and pipes the result through
-`reference/evaluator.py --quiet`, asserting the exit code is zero. This is the job that will
-become the Regression Gate in M2, so structure it as a separate job now.
+This replaces what was previously specified as a CI job, and it is the check that actually
+matters. The deliverable is a **Google Drive folder**, per the brief — a reviewer sees files,
+not an Actions history. What can sink the submission is an environment assumption that only
+holds on the development machine: a `uv` cache, a globally installed package, a Python patch
+version, a path that exists locally.
+
+The exposure here is real — `uv`, a pinned `uv.lock`, Python 3.12.9, an optional `viz`
+extra, and `reference/evaluator.py` invoked as a subprocess. Any of these can work locally
+for the wrong reason.
+
+```bash
+rm -rf /tmp/cleanroom && git clone . /tmp/cleanroom
+cd /tmp/cleanroom && uv sync --locked && make verify
+```
+
+M6 runs this again as the final gate. Running it **now** means an environment defect costs
+an hour on day one instead of the submission on day seven.
+
+### H0.4b — The ratchet infrastructure exists locally
+
+- **Kind:** structural
+- **Predicted:** a `pre-push` hook runs `make verify` and blocks the push on failure.
+- **Label:** manual falsification — break something, attempt a push, confirm it is refused.
+- **Falsified if:** the push succeeds with a broken gate.
+
+The Regression Gate (shared contract §4) has no content until M2, when there is a score to
+protect. Its *plumbing* belongs here: add the `pre-push` hook to `.pre-commit-config.yaml`
+under the `pre-push` stage, calling `make verify`. M2 fills in the score comparison.
+
+This is local and needs no hosting. A hook that refuses the push is stronger protection than
+a CI job that reports failure after the push has already landed.
 
 ### H0.5 — Coverage no longer races, and the Gate is faster
 
@@ -149,7 +262,9 @@ Two specific items:
 ## Exit gate
 
 - [ ] Gate green: `ruff format --check`, `ruff check`, `mypy src`, `pytest`.
-- [ ] CI green on a clean checkout of `main`.
+- [ ] H0.0 rollback complete: no `.github/workflows/`, no CI badge, no unrelated work lost.
+- [ ] Clean-room clone reproduces `256.8197122633766779770234` on first attempt.
+- [ ] `pre-push` hook installed and falsified once (broken gate refuses the push).
 - [ ] `git status --ignored` shows no tracked file matched by an ignore rule.
 - [ ] `tests/unit/test_docs_links.py` passes; zero dead relative links.
 - [ ] Every committed Markdown document is reachable from `README.md`.
@@ -168,12 +283,33 @@ Two specific items:
 
 ---
 
+## Optional: GitHub Actions
+
+Deferred, not forbidden. Revisit **only after M2 has landed**, and only if all three hold:
+
+- the repository stays on GitHub *and* the Drive README links to it, so a reviewer can
+  actually reach the Actions tab;
+- M0–M2 are green and tagged, so the schedule has slack;
+- it can be done in under thirty minutes.
+
+What it would add over the local hooks is narrow but real: dated proof that the gate passes
+on a machine that has never seen the project, on every commit. That is a stronger claim than
+"it passed when I ran it" — but it is a supporting claim, not the argument.
+
+If added, keep it to one workflow: checkout, install `uv`, `uv sync --locked`, run the Gate,
+then `make verify`. Do not let a misbehaving runner consume an afternoon that M3 needs.
+
+---
+
 ## Notes for the executing agent
 
 The score assertion is the whole point of this milestone. If it moves by even one digit,
 something in the "harmless cleanup" was not harmless — stop and diagnose before proceeding.
 Record the diagnosis as a REFINE entry; that is exactly the kind of finding the notebook
 exists to capture.
+
+Start with H0.0. Rolling back the CI work before touching anything else keeps the revert
+diff clean and reviewable; entangling it with the hygiene fixes makes both harder to read.
 
 **M0 is where TDD becomes auditable, so establish the convention here rather than at M1.**
 H0.1, H0.2 and H0.3 each introduce a new test file, and each must follow the eight-step loop

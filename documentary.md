@@ -161,3 +161,19 @@ ww
 When the revised plan is populated, record its line count, a focused diff of its
 requirements, the conclusion about what changed, and then continue the quality
 gates and any additional implementation it requires.
+
+## 2026-08-21 — M0 hygiene and reproducibility
+
+- Reverted the superseded two-commit hosted-CI experiment without rewriting
+  history; no workflow remains.
+- Repaired the local quality surface: default pytest no longer creates coverage
+  state, `make coverage` reports it on demand, and a thin Makefile provides the
+  documented gate, baseline, and verification targets.
+- Added a local `pre-push` hook that runs `make verify`. The README now installs
+  this hook and uses the Makefile as the single runbook interface.
+- Corrected CLI overlap reporting and removed inert Ruff exclusions. The score
+  path and submission placements were not changed.
+- Recorded red/green TDD evidence for each new structural check in the lab
+  notebook. A deliberate temporary Makefile failure was refused by the
+  installed pre-push hook and then removed. Final full-gate and clean-room
+  observations are recorded with the M0 completion evidence.

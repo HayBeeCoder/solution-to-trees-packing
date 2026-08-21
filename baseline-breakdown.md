@@ -68,6 +68,11 @@ The package source lives in [`src/tree_packing`](src/tree_packing). The official
 behavior is retained in [`reference`](reference), and the tests live in
 [`tests`](tests).
 
+M0 adds the operational surface around this baseline: [`Makefile`](Makefile)
+provides `gate`, `baseline`, `verify`, and `coverage` targets; the local
+pre-push hook invokes `make verify`; and coverage is intentionally opt-in so
+ordinary test runs remain side-effect free.
+
 ## 2. What challenge is being solved?
 
 ### 2.1 The object being packed
