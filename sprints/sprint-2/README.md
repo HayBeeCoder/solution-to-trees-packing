@@ -25,7 +25,7 @@ and the M6 ablation will be confounded before it starts.
 | # | Document | Theme | Score target | Status |
 |---|---|---|---|---|
 | M0 | [`M0-hygiene.md`](M0-hygiene.md) | Submission surface, clean-room repro, gates | `256.8197…` (unchanged) | DONE (`v0.2-hygiene`, `256.8197122633766779770234`) |
-| M1 | [`M1-geometry-core.md`](M1-geometry-core.md) | Fast geometry, clearance, run ledger | `256.8197…` (unchanged) | TODO |
+| M1 | [`M1-geometry-core.md`](M1-geometry-core.md) | Fast geometry, clearance, run ledger | `256.8197…` (unchanged) | DONE (`v0.3-core`, `256.8197122633766779770234`) |
 | M2 | [`M2-free-wins.md`](M2-free-wins.md) | Tight grid, rotation, insertion, ratchet | ≤ 160 | TODO |
 | M3 | [`M3-lattice.md`](M3-lattice.md) | Double-lattice backbone, n ≥ 21 | ≤ 110 | TODO |
 | M4 | [`M4-compaction.md`](M4-compaction.md) | Compaction + basin-hopping | ≤ 85 | TODO |

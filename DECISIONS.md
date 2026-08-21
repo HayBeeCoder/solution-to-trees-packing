@@ -3,8 +3,17 @@
 ## Faithful port over reinvention
 
 The constants and polygon vertices are copied from the supplied evaluator. The
-geometry is defined once in `geometry.py`, then reused by scoring and validation,
+geometry is defined once in `src/tree_packing/geometry/core.py`, then reused by scoring and validation,
 so the internal gatekeeper cannot silently disagree with the official evaluator.
+
+## M1 package boundaries and derived ledgers
+
+M1 splits the flat geometry and validation modules into sub-packages so the
+search-only fast path stays out of the authoritative validation path.
+`geometry/fast.py` exists for search acceleration only; `validation/` imports
+`geometry.core` and never the fast path. The run ledger is derived from stored
+runs, not hand-edited, and it rejects experiment runs and layouts below the
+clearance floor even if their score is attractive.
 
 ## `src/` layout and `uv`
 

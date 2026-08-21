@@ -11,6 +11,7 @@ from decimal import Decimal
 # --- Precision -------------------------------------------------------------
 DECIMAL_PRECISION = 25
 SCALE_FACTOR = Decimal("1e15")
+CLEARANCE_EPS = Decimal("1e-9")
 
 # --- Coordinate bounds enforced by the evaluator ---------------------------
 MIN_COORD = -100

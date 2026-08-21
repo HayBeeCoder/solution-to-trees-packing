@@ -185,7 +185,7 @@ The tree is first defined around the origin. Its full height is `1.0`, from
 is `0.7` units across.
 
 The exact 15 vertices used by the evaluator and by
-[`geometry.py`](src/tree_packing/geometry.py) are:
+[`src/tree_packing/geometry/core.py`](src/tree_packing/geometry/core.py) are:
 
 | # | Coordinate | Meaning |
 |---:|---|---|
@@ -281,9 +281,9 @@ The constructor accepts `Decimal`, `float`, or `str`. It first applies
 
 ### 3.4 Single source of truth
 
-[`tree_vertices()`](src/tree_packing/geometry.py) is the one package-level
+[`tree_vertices()`](src/tree_packing/geometry/core.py) is the one package-level
 definition of the 15 scaled vertices. Both scoring and validation call
-[`create_tree_polygon()`](src/tree_packing/geometry.py) rather than recreating
+[`create_tree_polygon()`](src/tree_packing/geometry/core.py) rather than recreating
 the tree independently.
 
 [`test_parity_with_reference.py`](tests/test_parity_with_reference.py) imports
@@ -344,9 +344,9 @@ The module has no functions and no mutable state. It is a constants module, and
 the tests verify the values that control precision, bounds, problem size, and
 the baseline spacing.
 
-### 5.2 `geometry.py`: canonical polygon construction
+### 5.2 `src/tree_packing/geometry/core.py`: canonical polygon construction
 
-[`geometry.py`](src/tree_packing/geometry.py) contains three useful concepts:
+[`src/tree_packing/geometry/core.py`](src/tree_packing/geometry/core.py) contains three useful concepts:
 
 1. `Number` — the accepted input type alias (`Decimal | float | str`).
 2. `_scaled(value)` — converts an unscaled `Decimal` into Shapely working space.
@@ -501,9 +501,9 @@ n, tree_idx, x, y, deg
 This normalized shape is the common input used by validation, scoring, and
 visualization.
 
-### 5.5 `validation.py`: structural and geometric checks
+### 5.5 `src/tree_packing/validation/overlap.py`: structural and geometric checks
 
-[`validation.py`](src/tree_packing/validation.py) has two layers.
+[`src/tree_packing/validation/overlap.py`](src/tree_packing/validation/overlap.py) has two layers.
 
 #### Pairwise geometric collision detection
 
@@ -547,6 +547,28 @@ The implementation intentionally mirrors the reference’s checks. It does not
 independently impose an angle limit, and it does not check polygon validity in
 the frame validator. The normal baseline path still creates valid polygons and
 then runs the overlap check.
+
+### 5.5.1 `geometry/`, `validation/`, and `optimize/`: the M1 package split
+
+M1 reorganizes the baseline into a small package hierarchy:
+
+- `geometry/core.py` is the authoritative polygon builder.
+- `geometry/fast.py` is a search-only NumPy path and must not replace
+  validation.
+- `geometry/decomposition.py` holds the exact four-piece convex split.
+- `geometry/neighbours.py` enumerates short lattice translations after basis
+  reduction.
+- `validation/overlap.py` keeps the structural submission checks.
+- `validation/clearance.py` reports the minimum pairwise separation.
+- `validation/gatekeeper.py` reads a written CSV back from disk and combines
+  structure, overlap, and clearance checks.
+- `optimize/types.py` defines frozen placement and layout records.
+- `optimize/ledger.py` stores immutable runs and derives the ledger as a
+  filtered arg-min.
+
+The split is the concrete enforcement point for the two-tier geometry rule:
+search can be faster, but validation stays authoritative and the ledger stays
+derived.
 
 ### 5.6 `scoring.py`: bounding square and normalized score
 
@@ -688,8 +710,8 @@ The package splits those same responsibilities into separate typed modules:
 | Reference evaluator | Package port |
 |---|---|
 | constants | `config.py` |
-| `create_tree_polygon` | `geometry.py` |
-| `check_overlap` | `validation.py` |
+| `create_tree_polygon` | `src/tree_packing/geometry/core.py` |
+| `check_overlap` | `src/tree_packing/validation/overlap.py` |
 | `calculate_bounding_box_side` | `scoring.py` |
 | `parse_submission_value` / loader | `serialization.py` |
 | `main` | `cli.py` |
@@ -964,10 +986,10 @@ Read the corresponding functions side by side:
 
 ```text
 reference/evaluator.py:create_tree_polygon
-src/tree_packing/geometry.py:create_tree_polygon
+src/tree_packing/geometry/core.py:create_tree_polygon
 
 reference/evaluator.py:check_overlap
-src/tree_packing/validation.py:find_overlapping_pairs
+src/tree_packing/validation/overlap.py:find_overlapping_pairs
 
 reference/evaluator.py:calculate_bounding_box_side
 src/tree_packing/scoring.py:bounding_box_side
@@ -1001,7 +1023,7 @@ optimizer that produces the same `dict[int, list[Placement]]` shape consumed by
 
 A sensible staged approach is:
 
-1. Keep `geometry.py`, `validation.py`, `scoring.py`, and `serialization.py`
+1. Keep `src/tree_packing/geometry/core.py`, `src/tree_packing/validation/overlap.py`, `scoring.py`, and `serialization.py`
    unchanged as the correctness kernel.
 2. Add an `optimizer.py` that solves one `n` at a time.
 3. Seed each `n` with the current grid, plus staggered or rotated alternatives.
@@ -1105,8 +1127,8 @@ configuration dictionary
   -- baseline.py --> placements
   -- serialization.py --> submission CSV
   -- serialization.py --> normalized DataFrame
-  -- geometry.py --> exact scaled polygons
-  -- validation.py --> legal or overlapping arrangement
+  -- src/tree_packing/geometry/core.py --> exact scaled polygons
+  -- src/tree_packing/validation/overlap.py --> legal or overlapping arrangement
   -- scoring.py --> one Decimal score per configuration
   -- cli.py --> total score and exit status
 ```

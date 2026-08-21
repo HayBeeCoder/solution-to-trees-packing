@@ -12,7 +12,7 @@ from tree_packing import config
 
 
 def find_overlapping_pairs(polygons: Sequence[BaseGeometry]) -> list[tuple[int, int]]:
-    """Return index pairs (i, j) that intersect without merely touching."""
+    """Return index pairs ``(i, j)`` that intersect without merely touching."""
     if len(polygons) <= 1:
         return []
 
@@ -22,7 +22,8 @@ def find_overlapping_pairs(polygons: Sequence[BaseGeometry]) -> list[tuple[int, 
         for j in index.query(poly):
             if j <= i:
                 continue
-            if poly.intersects(polygons[j]) and not poly.touches(polygons[j]):
+            other = polygons[j]
+            if poly.intersects(other) and not poly.touches(other):
                 pairs.append((i, j))
     return pairs
 
@@ -32,10 +33,7 @@ def has_overlap(polygons: Sequence[BaseGeometry]) -> bool:
 
 
 def validate_submission_frame(df: pd.DataFrame) -> list[str]:
-    """Structural validation: completeness of (n, tree_idx) and coordinate bounds.
-
-    Returns a list of human-readable error strings (empty == valid).
-    """
+    """Structural validation: completeness of ``(n, tree_idx)`` and coordinate bounds."""
     errors: list[str] = []
 
     expected = {(n, t) for n in range(config.MIN_TREES, config.MAX_TREES + 1) for t in range(n)}

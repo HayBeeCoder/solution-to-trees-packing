@@ -12,7 +12,12 @@ from tree_packing.baseline import build_baseline
 from tree_packing.geometry import create_tree_polygon
 from tree_packing.scoring import bounding_box_side, configuration_score
 from tree_packing.serialization import load_submission, write_submission
-from tree_packing.validation import find_overlapping_pairs, validate_submission_frame
+from tree_packing.validation import (
+    find_overlapping_pairs,
+    gatekeep_submission,
+    report_lines,
+    validate_submission_frame,
+)
 
 
 def _generate(output: Path) -> int:
@@ -77,6 +82,13 @@ def _visualize(submission: Path, n: int) -> int:
     return 0
 
 
+def _gatekeep(submission: Path) -> int:
+    report = gatekeep_submission(submission)
+    for line in report_lines(report):
+        print(line)
+    return 0 if report.is_valid else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI parser."""
     parser = argparse.ArgumentParser(description="Christmas Tree Packing baseline tools")
@@ -88,6 +100,9 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate = subparsers.add_parser("evaluate", help="evaluate a submission")
     evaluate.add_argument("submission", type=Path)
     evaluate.add_argument("--quiet", action="store_true")
+
+    gatekeep = subparsers.add_parser("gatekeep", help="run the full disk-backed gatekeeper")
+    gatekeep.add_argument("submission", type=Path)
 
     visualize = subparsers.add_parser("visualize", help="visualize one configuration")
     visualize.add_argument("submission", type=Path)
@@ -103,6 +118,8 @@ def main(argv: list[str] | None = None) -> int:
         return _generate(args.output)
     if args.command == "evaluate":
         return _evaluate(args.submission, args.quiet)
+    if args.command == "gatekeep":
+        return _gatekeep(args.submission)
     return _visualize(args.submission, args.n)
 
 

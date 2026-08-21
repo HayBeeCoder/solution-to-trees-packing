@@ -180,3 +180,23 @@ gates and any additional implementation it requires.
   environment, passed all 34 tests, returned the internal score
   `256.8197122633766779770234`, and the official evaluator displayed
   `256.819712` with no overlaps.
+
+## 2026-08-21 — M1 geometry core
+
+- Split the flat geometry and validation modules into `geometry/` and
+  `validation/`, then added the search-only fast geometry path, exact convex
+  decomposition, geometric neighbour enumeration, clearance reporting,
+  disk-backed gatekeeping, and immutable run-ledger scaffolding.
+- Added import-linter boundaries so validation cannot import the fast geometry
+  path, and exposed a `tree-packing gatekeep` CLI command for disk-backed CSV
+  validation.
+- Updated the README, notebook, baseline breakdown, and sprint status so the
+  repository now describes the finished M1 state rather than the pre-split
+  baseline.
+- Verification completed locally: `uv run ruff format --check .`,
+  `uv run ruff check .`, `uv run mypy src`, `uv run lint-imports`,
+  `uv run pytest`, `uv run tree-packing generate --output data/submissions/baseline.csv`,
+  `uv run tree-packing evaluate data/submissions/baseline.csv`, and
+  `uv run python reference/evaluator.py data/submissions/baseline.csv --quiet`
+  all passed, with the internal score remaining
+  `256.8197122633766779770234`.

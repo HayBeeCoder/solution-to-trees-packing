@@ -270,7 +270,7 @@ BASE_Y = Decimal("0.0")
 TRUNK_BOTTOM_Y = -TRUNK_HEIGHT
 ```
 
-### 4.2 `src/tree_packing/geometry.py`
+### 4.2 `src/tree_packing/geometry/core.py`
 
 ```python
 """Canonical Christmas-tree polygon construction.
@@ -374,7 +374,7 @@ def configuration_score(side: Decimal, n: int) -> Decimal:
     return (side * side) / Decimal(n)
 ```
 
-### 4.4 `src/tree_packing/validation.py`
+### 4.4 `src/tree_packing/validation/overlap.py`
 
 ```python
 """Overlap detection and submission-level validation (port of evaluator checks)."""

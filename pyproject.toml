@@ -6,7 +6,9 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pandas>=2.2",
+    "numpy>=2.0",
     "shapely>=2.0",
+    "scipy>=1.13",
 ]
 
 [project.optional-dependencies]
@@ -17,6 +19,7 @@ tree-packing = "tree_packing.cli:main"
 
 [dependency-groups]
 dev = [
+    "import-linter>=2.0",
     "pytest>=8.2",
     "pytest-cov>=5.0",
     "ruff>=0.6",
@@ -58,3 +61,18 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra -q"
+
+[tool.importlinter]
+root_package = "tree_packing"
+
+[[tool.importlinter.contracts]]
+name = "validation must not depend on fast geometry"
+type = "forbidden"
+source_modules = ["tree_packing.validation"]
+forbidden_modules = ["tree_packing.geometry.fast"]
+
+[[tool.importlinter.contracts]]
+name = "serialization stays geometry-free"
+type = "forbidden"
+source_modules = ["tree_packing.serialization"]
+forbidden_modules = ["tree_packing.geometry", "tree_packing.validation"]

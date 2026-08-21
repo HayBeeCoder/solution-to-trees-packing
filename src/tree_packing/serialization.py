@@ -4,12 +4,33 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import Protocol, cast
 
 import pandas as pd
 
 from tree_packing import config
 
 Placement = tuple[float, float, float]
+
+
+class _PlacementLike(Protocol):
+    x: float
+    y: float
+    deg: float
+
+
+def _placement_components(placement: object) -> tuple[float, float, float]:
+    if isinstance(placement, tuple) and len(placement) == 3:
+        return float(placement[0]), float(placement[1]), float(placement[2])
+    try:
+        typed_placement = cast(_PlacementLike, placement)
+        return (
+            float(typed_placement.x),
+            float(typed_placement.y),
+            float(typed_placement.deg),
+        )
+    except AttributeError as exc:  # pragma: no cover - defensive fallback
+        raise TypeError(f"Unsupported placement type: {type(placement)!r}") from exc
 
 
 def format_value(value: float) -> str:
@@ -24,7 +45,9 @@ def parse_value(value: str | float) -> float:
     return float(value)
 
 
-def write_submission(solutions: Mapping[int, Sequence[Placement]], path: str | Path) -> None:
+def write_submission(
+    solutions: Mapping[int, Sequence[Placement | object]], path: str | Path
+) -> None:
     """Serialize {n: [(x, y, deg), ...]} to the official CSV layout."""
     rows = [
         {
@@ -34,7 +57,8 @@ def write_submission(solutions: Mapping[int, Sequence[Placement]], path: str | P
             "deg": format_value(deg),
         }
         for n in range(config.MIN_TREES, config.MAX_TREES + 1)
-        for t, (x, y, deg) in enumerate(solutions[n])
+        for t, placement in enumerate(solutions[n])
+        for x, y, deg in [_placement_components(placement)]
     ]
 
     out = Path(path)

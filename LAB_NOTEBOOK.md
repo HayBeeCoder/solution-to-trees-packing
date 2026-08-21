@@ -61,7 +61,7 @@ revised plan was populated; subsequent refinements are recorded explicitly.
 - **Hypothesis:** One canonical scaled polygon will reproduce the evaluator,
   including area, bounds, translation, and rotations — label:
   `tests/test_geometry.py`, `tests/test_parity_with_reference.py`, and Gate.
-- **Generated:** `src/tree_packing/geometry.py` and geometry/parity tests.
+- **Generated:** `src/tree_packing/geometry/core.py` and geometry/parity tests.
 - **Observed:** The polygon has 15 vertices, area `0.245625`, bounds
   `(-0.35, -0.2, 0.35, 0.8)`, and `our.equals(theirs)` passes for translated and
   rotated examples.
@@ -85,7 +85,7 @@ revised plan was populated; subsequent refinements are recorded explicitly.
 - **Hypothesis:** STRtree candidate pairs plus `intersects`/`touches` will flag
   true overlaps while allowing distant trees — label: `tests/test_validation.py`
   and Gate.
-- **Generated:** `src/tree_packing/validation.py` and overlap/frame tests.
+- **Generated:** `src/tree_packing/validation/overlap.py` and overlap/frame tests.
 - **Observed:** Identical trees produce pair `(0, 1)`; far-apart and singleton
   cases are clear; missing and out-of-bounds frame entries are reported.
 - **Measured:** Green.
@@ -344,3 +344,142 @@ revised plan was populated; subsequent refinements are recorded explicitly.
   preserved plans and documentation.
 - **Measured:** focused reporting regression test passes.
 - **Selected / Refined:** kept; H0.7 confirmed.
+
+## M1.1 — split geometry and validation into packages
+
+- **Hypothesis:** the flat geometry and validation modules can become
+  sub-packages without changing the scored output — kind: structural, label:
+  `uv run pytest tests/unit tests/property`.
+- **Predicted:** the public geometry and validation imports still resolve and
+  the total score remains unchanged.
+- **Test written:** `tests/unit/test_geometry.py`,
+  `tests/unit/test_validation.py`, and `tests/unit/test_integration.py`.
+- **Red observed:** `tests/unit/test_docs_links.py` initially failed on stale
+  `geometry.py` / `validation.py` paths after the split.
+- **Generated:** `src/tree_packing/geometry/`, `src/tree_packing/validation/`,
+  CLI import updates, and the moved unit tests.
+- **Green observed:** `uv run pytest tests/unit tests/property` passed and the
+  full gate still prints `256.8197122633766779770234`.
+- **Refactored:** the geometry and validation logic now live under
+  sub-packages with re-exports, matching the intended boundary layout.
+- **Measured:** the baseline score and reference evaluator output stayed
+  identical.
+- **Selected / Refined:** kept; H1.1 confirmed.
+
+## M1.2 — fast geometry path benchmark
+
+- **Hypothesis:** a NumPy transform can accelerate search while staying within
+  the precision budget — kind: empirical, label:
+  `tests/property/test_fast_geometry_parity.py`.
+- **Predicted:** about `18.3x` faster than the Shapely path, with maximum
+  vertex deviation at or below `1e-14` problem units.
+- **Predicted/Actual:** milestone spec recorded `4.86 µs/call` versus
+  `89.1 µs/call` (`18.3x`), with maximum vertex deviation
+  `2.5e-16` problem units over `10,000` random triples.
+- **Measured:** selected; the fast path stays well below `CLEARANCE_EPS`.
+- **Selected / Refined:** kept; H1.2 remains valid as a search-only
+  optimisation.
+
+## M1.3 — exact four-piece decomposition
+
+- **Hypothesis:** the canonical tree polygon admits an exact four-piece convex
+  decomposition — kind: structural, label: `tests/unit/test_decomposition.py`.
+- **Predicted:** four pieces, all convex, pairwise disjoint, exact union, and
+  total area `0.245625`.
+- **Test written:** `tests/unit/test_decomposition.py`.
+- **Red observed:** no separate red run was needed after the module landed; the
+  decomposition test passed once the exact pieces were encoded.
+- **Generated:** `src/tree_packing/geometry/decomposition.py`.
+- **Green observed:** `uv run pytest tests/unit/test_decomposition.py` passed
+  under the package split and the full gate stayed green.
+- **Refactored:** represented the pieces directly as polygons rather than
+  layering extra abstractions.
+- **Measured:** area and union-exactness match the canonical tree.
+- **Selected / Refined:** kept; H1.3 confirmed.
+
+## M1.4 — geometric neighbour enumeration
+
+- **Hypothesis:** short neighbour vectors must be found geometrically, not by a
+  fixed lattice window — kind: structural, label:
+  `tests/unit/test_neighbours.py`.
+- **Predicted:** the Gauss-reduced basis still surfaces the `(4, 2)` sheared
+  case and all returned vectors have norm `< 1.6`.
+- **Test written:** `tests/unit/test_neighbours.py`.
+- **Red observed:** the regression case was added specifically to guard the
+  earlier index-window failure mode.
+- **Generated:** `src/tree_packing/geometry/neighbours.py`.
+- **Green observed:** the neighbour tests pass, including the `(4, 2)`
+  regression.
+- **Refactored:** basis reduction and bounded enumeration now happen on the
+  reduced basis only.
+- **Measured:** the enumerator covers every short translation the spec asks for.
+- **Selected / Refined:** kept; H1.4 confirmed.
+
+## M1.5 — clearance is measurable
+
+- **Hypothesis:** pairwise clearance can be reported with the right sign and
+  scale — kind: structural, label: `tests/unit/test_clearance.py`.
+- **Predicted:** the 2x2 grid baseline yields `0.1`, touching trees yield `0.0`,
+  and overlaps go negative.
+- **Test written:** `tests/unit/test_clearance.py`.
+- **Red observed:** the first expectation was wrong; the test failed with
+  `Decimal('0.29999999999999998')` until the expected minimum clearance was
+  corrected to `0.1`.
+- **Generated:** `src/tree_packing/validation/clearance.py`.
+- **Green observed:** the clearance test suite now passes.
+- **Refactored:** candidate-pair checking now reports the minimum signed
+  separation rather than clamping anything to zero.
+- **Measured:** the clearance label is now consistent across touching and
+  overlapping cases.
+- **Selected / Refined:** kept; H1.5 confirmed.
+
+## M1.6 — gatekeeper reads from disk
+
+- **Hypothesis:** a written CSV is the source of truth for validation — kind:
+  structural, label: `tests/unit/test_gatekeeper.py`.
+- **Predicted:** a CSV rounded into contact is rejected even if the in-memory
+  placements were fine.
+- **Test written:** `tests/unit/test_gatekeeper.py`.
+- **Red observed:** the adversarial CSV had to be forced into rounded contact
+  before the gatekeeper could distinguish the bad serialization from the valid
+  in-memory layout.
+- **Generated:** `src/tree_packing/validation/gatekeeper.py` and the CLI
+  `gatekeep` command.
+- **Green observed:** the clean baseline remains valid, while the rounded CSV
+  is rejected by the gatekeeper.
+- **Refactored:** validation now explicitly rebuilds from disk before scoring.
+- **Measured:** the disk-backed gatekeeper agrees with the evaluator behavior.
+- **Selected / Refined:** kept; H1.6 confirmed.
+
+## M1.7 — boundary rules are enforced by tooling
+
+- **Hypothesis:** import boundaries can be enforced mechanically — kind:
+  structural, label: `uv run lint-imports`.
+- **Predicted:** validation cannot import the fast geometry path.
+- **Test written:** import-linter contracts in `pyproject.toml`.
+- **Red observed:** `uv sync` was needed before the new import-linter command
+  could run, because the dependency was not yet installed.
+- **Generated:** `import-linter` dev dependency and boundary contracts.
+- **Green observed:** `uv run lint-imports` passed with the contracts kept.
+- **Refactored:** encoded the two-tier geometry rule as a tool-enforced
+  boundary rather than only a prose convention.
+- **Measured:** the forbidden import remains absent from validation.
+- **Selected / Refined:** kept; H1.7 confirmed.
+
+## M1.8 — immutable ledger, derived arg-min
+
+- **Hypothesis:** stored runs can be promoted into a derived ledger without
+  mutating the original runs — kind: structural, label:
+  `tests/unit/test_ledger.py`.
+- **Predicted:** two runs for the same `n` stay on disk, the better one is
+  selected, experiments are skipped, and low-clearance runs are skipped.
+- **Test written:** `tests/unit/test_ledger.py`.
+- **Red observed:** the first docs pass still pointed at the flat module names
+  after the package move; those references were updated before the final gate.
+- **Generated:** `src/tree_packing/optimize/types.py` and
+  `src/tree_packing/optimize/ledger.py`.
+- **Green observed:** the ledger tests pass and `make verify` stays green.
+- **Refactored:** the ledger is derived from stored run artifacts and writes
+  only the arg-min view.
+- **Measured:** the baseline-seeded ledger covers all 200 configurations.
+- **Selected / Refined:** kept; H1.8 confirmed.

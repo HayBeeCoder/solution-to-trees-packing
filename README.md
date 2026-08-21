@@ -28,8 +28,15 @@ make verify
 
 `make verify` runs the quality gate, generates the baseline, checks it with the
 package evaluator, then checks the written CSV with the official evaluator.
-Use `make coverage` when a coverage report is needed; normal test runs do not
-write shared coverage state.
+`make gate` now includes import-linter alongside Ruff, mypy, and pytest. Use
+`make coverage` when a coverage report is needed; normal test runs do not write
+shared coverage state.
+
+The M1 gatekeeper validates a written CSV back from disk:
+
+```bash
+uv run tree-packing gatekeep data/submissions/baseline.csv
+```
 
 The generated CSV contains 20,100 rows, covering every configuration from one
 through 200 trees. The optional visualization command requires the extra:
@@ -57,7 +64,7 @@ The reference challenge files are retained in `reference/` for direct comparison
   [M5](sprints/sprint-2/M5-small-n.md), and
   [M6](sprints/sprint-2/M6-ablation-freeze.md).
 - [Baseline breakdown](baseline-breakdown.md): detailed architecture, data flow,
-  and evaluator walkthrough.
+  and evaluator walkthrough, including the M1 package split.
 - [Decisions](DECISIONS.md): implementation assumptions and trade-offs.
 - [Lab notebook](LAB_NOTEBOOK.md): auditable hypotheses, observations, and
   refinements.
