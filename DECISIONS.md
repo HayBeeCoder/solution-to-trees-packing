@@ -93,3 +93,22 @@ for M3, not just observations:
    otherwise correct. `tests/regression/test_monotonicity.py` uses
    `TOLERANCE = 1e-20`, pinned by a second test to stay eleven orders below
    `CLEARANCE_EPS` so it cannot be loosened into masking a real defect.
+
+## M3 kickoff — per-seed wall-clock recording (2026-08-21)
+
+`RunManifest.wall_clock_s` has existed since M1/M2, but `cli.py::_solve` only
+ever calls `store_run` once per whole `solve` invocation (one number for all
+200 configurations). That was sufficient for M2 (grid + rotation is fast and
+deterministic), but `M4-compaction.md` and `M5-small-n.md` both require
+"equal wall-clock" comparisons across ≥5 seeds, and `M3-lattice.md`'s own
+H3.2 calls for five SA seeds "each recorded as its own run in the ledger" —
+without a per-seed `wall_clock_s`, those later comparisons would have nothing
+to compare against and would require re-running finished searches just to
+capture timing that could have been free.
+
+Decision: starting with H3.2, every simulated-annealing seed is stored as its
+own `RunManifest` (`run_id` distinguishing the seed) with its own
+`perf_counter()`-measured `wall_clock_s`, rather than one aggregate figure for
+the whole search. This is a usage-pattern change only — `RunManifest` and
+`store_run` already support it — recorded here so it's an explicit decision
+rather than something that starts happening silently partway through M3.
