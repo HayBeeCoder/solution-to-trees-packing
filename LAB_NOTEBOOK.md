@@ -772,3 +772,41 @@ addition of `tests/regression/` described above:
   was already gating correctly on its own — recorded here rather than
   silently patched without comment, since H3.1's entry above predates the
   discovery.
+
+### H3.3 — Window truncation is a searchable sub-problem
+
+- **Hypothesis:** for each `n`, sliding a square window over the infinite
+  tiling and binary-searching its side yields a valid `n`-tree selection —
+  kind: structural, label: `tests/unit/test_truncation.py`.
+- **Test written:** `tests/unit/test_truncation.py`, against
+  `tree_packing.geometry.truncation` before that module existed, using the
+  H3.2-confirmed lattice (seed 4, `p=0.84670, q=-0.25956, h=0.80000,
+  u=-0.15565, v=-0.30308`, density `0.725241`) as the tiling to truncate.
+- **Red observed:** `ModuleNotFoundError: No module named
+  'tree_packing.geometry.truncation'`.
+- **Generated:** `src/tree_packing/geometry/truncation.py::truncate_to_n`.
+  Selection method: grow a candidate pool of both sublattices' points until
+  it exceeds `n`, then keep the `n` closest to the origin by Chebyshev
+  distance (the natural metric for a square window). Validity is structural,
+  not re-verified per call: any subset of a feasible lattice (H3.1) stays
+  overlap-free, since removing trees cannot create new intersections.
+- **Green observed:** `pytest tests/unit/test_truncation.py -v` — 2 passed,
+  covering every `n` in `21..200` (180 configurations) plus a determinism
+  check.
+- **Independent cross-check against the real evaluator:** a sample of five
+  `n` (`21, 50, 100, 150, 200`), materialised and run through
+  `reference/evaluator.py::check_overlap` directly rather than trusting the
+  repo's own port — zero overlaps at all five.
+- **Known limitation, recorded rather than hidden:** the milestone's fuller
+  description calls for binary-searching the window side and then
+  *refining the choice of which trees with simulated annealing over swap
+  moves*. Only the first part (nearest-candidate selection) is implemented
+  here; the swap-move refinement is not. `truncate_to_n` therefore produces
+  a *valid* truncation for every `n` (satisfying this sub-hypothesis and the
+  exit-gate checkbox), but not necessarily a tight one — see H3.4, where
+  this shows up directly as boundary loss well above the milestone's own
+  worked example at every `n` tested.
+- **Selected / Refined:** kept; H3.3 confirmed as stated (validity), with
+  the refinement step left open and flagged for follow-up rather than
+  silently assumed done.
+
