@@ -696,3 +696,79 @@ addition of `tests/regression/` described above:
   feasible region under uniform random sampling in this parameter range is
   sparse (27/32 in the sweep), consistent with H3.2's plan to use simulated
   annealing rather than random search to find it.
+
+### H3.2 — Simulated annealing finds a lattice with density ≥ 0.60
+
+- **Hypothesis:** best-of-five-seeds asymptotic density ≥ `0.60`, median ≥
+  `0.55` — kind: empirical, label: cell density from the search, confirmed by
+  materialisation against `reference/evaluator.py`.
+- **Objective:** `-cell_density(basis)` subject to a hard feasibility
+  barrier (see anomaly below), searched with `scipy.optimize.dual_annealing`
+  over `LatticeBasis`'s five parameters, `maxiter=400`, bounds wide enough to
+  contain the milestone doc's known `~0.6054` lattice without assuming its
+  exact parameters.
+- **Anomaly found and fixed before any seed was trusted:** the first working
+  version of the objective used a soft-weighted clearance penalty
+  (`-density + 50 * clearance_gap`), and its `min_clearance` helper compared
+  shapely distances directly against `config.CLEARANCE_EPS`. Both of
+  `geometry.lattice`'s `_collides` and this new helper had the same bug:
+  `create_tree_polygon` returns coordinates already multiplied by
+  `config.SCALE_FACTOR` (`1e15`), so raw shapely distances are ~15 orders of
+  magnitude larger than `CLEARANCE_EPS`, which is expressed in unscaled
+  problem units. `geometry.lattice.is_lattice_feasible`'s clearance check was
+  therefore silently inert (it could never fire) since H3.1, though this
+  didn't surface there because `has_overlap`'s boolean intersects/touches
+  test still gated feasibility correctly on its own. It surfaced here because
+  a *continuous* clearance signal is load-bearing for the SA objective, not
+  optional: seed 0 under the buggy objective reported **density 0.8663 at a
+  clearance of -0.00184** — above the milestone's own anomaly-watch
+  threshold (`0.75`) and a clearance *reported* as negative (i.e. an actual
+  overlap) despite the objective supposedly penalising exactly that. Per the
+  milestone's explicit instruction ("materialise before believing it"),
+  materialised this basis and cross-checked with the real
+  `reference/evaluator.py`: confirmed invalid, **163 real overlapping pairs**
+  (e.g. `(0, 15), (0, 1), (2, 14), (2, 3), (2, 17)`) — the exact `0.877`
+  vs. `0.327` failure story the milestone doc describes, reproduced for
+  real, not hypothetically.
+- **Fixed by:** (1) rewriting both `_collides` (in `geometry.lattice`) and
+  the new `min_signed_clearance` (in `geometry.lattice_search`) to reuse
+  `validation.clearance.min_pairwise_clearance`, which already performs the
+  correct scale conversion (confirmed against the pre-existing, tested
+  `src/tree_packing/validation/clearance.py`, not reinvented); (2) replacing
+  the soft-weighted
+  penalty with a hard barrier — any candidate violating `CLEARANCE_EPS`
+  scores `10.0 + 1000 * gap`, always worse than any feasible candidate's
+  `-density` (bounded in `(-1, 0)`), removing the possibility of the
+  optimiser trading a small, real clearance violation for a density gain.
+- **Measured (five seeds, 2026-08-21), each stored as its own lattice run
+  with its own `wall_clock_s`, per this milestone's kickoff decision in
+  `DECISIONS.md`:**
+
+  | seed | density | clearance | wall_clock_s |
+  |---|---|---|---|
+  | 0 | 0.693730 | 0.0014072 | 58.34 |
+  | 1 | 0.622670 | 0.0045595 | 35.17 |
+  | 2 | 0.669979 | 0.0093751 | 42.84 |
+  | 3 | 0.552120 | 0.0021190 | 35.58 |
+  | 4 | **0.725241** | 0.0000014 | 43.89 |
+
+  Best-of-five: `0.725241` (seed 4). Median: `0.669979`. Both comfortably
+  clear the falsification floor (`0.55` best-of-five) and the predicted
+  targets (`0.60` best-of-five, `0.55` median).
+- **Anomaly-watch note on seed 4 specifically:** its clearance (`1.4e-6`) is
+  roughly three orders of magnitude tighter than the other four seeds'
+  margins, and its density (`0.7252`) is the closest of the five to the
+  `0.75` anomaly threshold. Given the H3.2-anomaly above happened on exactly
+  this kind of tight-margin result, seed 4 was independently materialised
+  (on a *9×9* patch, larger than H3.1's standard 7×7, specifically to rule
+  out a boundary-of-the-materialised-window artifact) and cross-checked
+  against `reference/evaluator.py` directly: **zero overlaps.** Confirmed
+  genuine, not a repeat of the anomaly above.
+- **Selected / Refined:** kept; H3.2 confirmed at density `0.725241`
+  (seed 4's basis), well inside the falsification and anomaly bounds. The
+  clearance-scaling bug is also retroactively relevant to H3.1: its
+  `is_lattice_feasible` clearance term was inert for the same reason, though
+  it happened not to change H3.1's result since the boolean overlap check
+  was already gating correctly on its own — recorded here rather than
+  silently patched without comment, since H3.1's entry above predates the
+  discovery.
