@@ -810,3 +810,50 @@ addition of `tests/regression/` described above:
   the refinement step left open and flagged for follow-up rather than
   silently assumed done.
 
+### H3.4 — Boundary loss is large, n-dependent, and worth attacking
+
+- **Hypothesis:** achieved density falls well short of the asymptotic
+  value — kind: empirical, label: achieved density per `n` vs. cell density.
+- **Predicted:** roughly 18% loss at `n = 50`, 6% at `n = 200` (milestone
+  doc's own worked example, from a different, SA-swap-refined `0.6054`
+  lattice).
+- **Falsified if:** the gap is under 3% at `n = 50`.
+- **Measured (this audit's unrefined `truncate_to_n`, 2026-08-21), full
+  sweep `n = 21..200`, cell density `0.725241`:**
+
+  | n | side | term `s_n²/n` | achieved ρ | loss vs `0.725241` |
+  |---|---|---|---|---|
+  | 21 | 3.50308 | 0.58436 | 0.4203 | 42.0% |
+  | 30 | 4.30309 | 0.61722 | 0.3980 | 45.1% |
+  | 41 | 5.10309 | 0.63516 | 0.3867 | 46.7% (worst in range) |
+  | 50 | 5.10309 | 0.52083 | 0.4716 | 35.0% |
+  | 75 | 5.90309 | 0.46462 | 0.5287 | 27.1% |
+  | 100 | 6.70309 | 0.44931 | 0.5467 | 24.6% |
+  | 125 | 7.50309 | 0.45037 | 0.5454 | 24.8% |
+  | 150 | 8.30309 | 0.45961 | 0.5344 | 26.3% |
+  | 172 | 8.32030 | 0.40248 | 0.6103 | 15.9% (best in range) |
+  | 200 | 9.10309 | 0.41433 | 0.5928 | 18.3% |
+
+  Sum of `configuration_score` terms across `n = 21..200` alone (lattice
+  truncation only, no rotation/insertion/ratchet from M2, and `n = 1..20`
+  not yet covered by this milestone): `83.537`.
+- **Not falsified:** loss at `n = 50` (35.0%) is far above the 3% floor —
+  the underlying claim (boundary loss is large and worth attacking) holds
+  strongly. **Read the magnitude with the H3.3 caveat above in mind,
+  though:** every measured loss here is larger than the milestone's own
+  worked-example numbers at the same `n` (e.g. 35.0% vs. the doc's 18% at
+  `n = 50`; 18.3% vs. the doc's 6% at `n = 200`). That gap is consistent
+  with — and expected from — H3.3's unrefined nearest-candidate selection
+  rather than evidence that this lattice or this milestone's approach is
+  worse than predicted. The worked example's better numbers came from a
+  lattice with SA-swap-refined truncation; this measurement has not done
+  that refinement yet.
+- **Lumpiness confirmed:** loss is not monotone in `n` (e.g. `n = 172` loses
+  less than `n = 150` or `n = 200`), matching the milestone doc's own
+  observation that truncation quality is lumpy rather than smooth — some
+  `n` land on cleaner window boundaries than others.
+- **Selected / Refined:** kept; H3.4 confirmed (boundary loss is real,
+  large, and `n`-dependent) with the curve above recorded as this
+  milestone's actual sizing input for M4, on the explicit understanding
+  that these are upper-bound loss figures pending truncation refinement,
+  not a ceiling on what the lattice approach can achieve.
