@@ -642,3 +642,57 @@ addition of `tests/regression/` described above:
   — noise of the same serialization-truncation kind as H2.5's, not a scoring
   defect; not corrected here since correcting it would mean editing a
   committed artifact outside this gate-closure task's scope.
+
+## M3 — the double-lattice backbone
+
+### H3.1 — Feasibility of a lattice is decided on the fundamental cell
+
+- **Hypothesis:** a lattice passing the internal feasibility check also
+  passes `reference/evaluator.py` on a materialised 7×7 patch, for every
+  basis tested including strongly sheared ones — kind: structural, label:
+  `tests/property/test_lattice_feasibility.py`.
+- **Predicted:** internal feasibility and evaluator-verified feasibility
+  agree on every basis tested.
+- **Test written:** `tests/property/test_lattice_feasibility.py`, importing
+  `tree_packing.geometry.lattice` before that module existed.
+- **Red observed:** `ModuleNotFoundError: No module named
+  'tree_packing.geometry.lattice'` — collection error, confirming the test
+  fails for the expected reason (the module genuinely does not exist yet),
+  not a typo or fixture problem.
+- **Generated:** `src/tree_packing/geometry/lattice.py` — `LatticeBasis`
+  (five parameters: `p, q, h, u, v`), `is_lattice_feasible`, and
+  `materialise_patch`. Reuses `geometry.neighbours.enumerate_neighbour_vectors`
+  for the two same-sublattice self-neighbour checks (upright-upright,
+  inverted-inverted), which are naturally centred on the origin.
+- **Anomaly found and fixed before GREEN (this is the actual point of
+  H3.1):** the first implementation's cross-sublattice check (upright versus
+  inverted) reused the origin-centred neighbour enumeration by adding
+  `(u, v)` to each short lattice vector. That is wrong: it finds lattice
+  points near `(u, v)`, not lattice points `L` for which `(u, v) + L` is
+  near the origin, which is the actual question ("is there an inverted tree
+  close to this upright one?"). Running the property test against 30 random
+  bases surfaced this directly — seed 24
+  (`p=1.1699, q=0.6116, h=0.7461, u=1.1659, v=-0.4565`) was ruled internally
+  feasible, materialised, and the *reference* evaluator (imported directly
+  from `reference/evaluator.py`, not the repo's own port) reported five real
+  overlaps: `[(5, 28), (7, 30), (9, 32), (11, 34), (13, 36)]`. This is
+  exactly the shared-contract §8.1 failure mode, reproduced on a new
+  sub-problem as the milestone doc warned it would be. Fixed by adding
+  `_lattice_points_near(a, b, target, radius)`, which bounds and searches
+  integer coefficients around the *target's* lattice coordinates (via the
+  same row-sum bounding technique as `geometry.neighbours`'s
+  `_coefficient_bound`, but centred on `-(u, v)` instead of the origin) —
+  geometric distance over the reduced structure of the basis, still never an
+  index window, but correctly re-centred for a non-origin query.
+- **Green observed:** `pytest tests/property/test_lattice_feasibility.py -v`
+  — 5 passed, 27 skipped (bases the internal check itself correctly ruled
+  infeasible — not a claim under test), 0 failed. The previously-failing
+  seed 24 is now among the skipped (correctly rejected), not silently
+  passing.
+- **Refactored:** none needed beyond the fix above; `mypy src` required
+  tightening `_collides`'s signature from `object` to `Polygon` rather than
+  suppressing the resulting type error.
+- **Selected / Refined:** kept; H3.1 confirmed, with the caveat that the
+  feasible region under uniform random sampling in this parameter range is
+  sparse (27/32 in the sweep), consistent with H3.2's plan to use simulated
+  annealing rather than random search to find it.
