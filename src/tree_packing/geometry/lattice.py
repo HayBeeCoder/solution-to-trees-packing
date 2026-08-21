@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from decimal import Decimal
 
 import numpy as np
 from shapely.geometry import Polygon
@@ -21,7 +22,7 @@ from shapely.geometry import Polygon
 from tree_packing import config
 from tree_packing.geometry.core import create_tree_polygon
 from tree_packing.geometry.neighbours import enumerate_neighbour_vectors
-from tree_packing.validation.overlap import has_overlap
+from tree_packing.validation.clearance import min_pairwise_clearance
 
 _NEIGHBOUR_RADIUS = 1.6
 
@@ -40,7 +41,7 @@ class LatticeBasis:
         return (self.p, 0.0), (self.q, self.h)
 
 
-def is_lattice_feasible(basis: LatticeBasis, clearance_eps: float | None = None) -> bool:
+def is_lattice_feasible(basis: LatticeBasis, clearance_eps: Decimal | None = None) -> bool:
     """Decide feasibility on the fundamental cell alone.
 
     Checks three neighbour families, each over Gauss-reduced geometric
@@ -52,7 +53,7 @@ def is_lattice_feasible(basis: LatticeBasis, clearance_eps: float | None = None)
     if basis.p <= 0 or basis.h <= 0:
         return False
 
-    eps = float(clearance_eps if clearance_eps is not None else config.CLEARANCE_EPS)
+    eps = clearance_eps if clearance_eps is not None else config.CLEARANCE_EPS
     a, b = basis.vectors()
     same_sublattice_vectors = enumerate_neighbour_vectors(a, b, radius=_NEIGHBOUR_RADIUS)
 
@@ -116,14 +117,15 @@ def lattice_points_near(
     return points
 
 
-def _collides(first: Polygon, second: Polygon, eps: float) -> bool:
-    # has_overlap treats exact touching as fine; require an explicit clearance
-    # margin instead by shrinking neither polygon and relying on the shared
-    # evaluator-faithful intersects/touches test, then rejecting anything
-    # closer than eps via distance as a second, independent check.
-    if has_overlap([first, second]):
-        return True
-    return bool(first.distance(second) < eps)
+def _collides(first: Polygon, second: Polygon, eps: Decimal) -> bool:
+    # min_pairwise_clearance already converts shapely's scaled-coordinate
+    # distances (and overlap areas) back into unscaled problem units, so eps
+    # is compared like-for-like against config.CLEARANCE_EPS. A prior version
+    # of this function compared raw (scaled) shapely distances directly
+    # against eps, which is off by config.SCALE_FACTOR (1e15) and made the
+    # clearance margin silently inert -- caught and fixed while wiring up
+    # H3.2's search objective, see LAB_NOTEBOOK.md.
+    return min_pairwise_clearance([first, second]) < eps
 
 
 def materialise_patch(basis: LatticeBasis, extent: int = 7) -> list[tuple[float, float, float]]:
