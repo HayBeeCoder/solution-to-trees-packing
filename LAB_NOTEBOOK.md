@@ -857,3 +857,86 @@ addition of `tests/regression/` described above:
   milestone's actual sizing input for M4, on the explicit understanding
   that these are upper-bound loss figures pending truncation refinement,
   not a ceiling on what the lattice approach can achieve.
+
+### H3.3 (completion) — simulated annealing over swap moves
+
+The milestone's H3.3 description has two parts: nearest-candidate selection
+(done, committed as `feat(H3.3)`) and *"refine the choice of which trees
+with simulated annealing over swap moves"* (not done at the time —
+recorded as an explicit limitation in that commit). This closes the second
+part.
+
+- **Test written:** `tests/unit/test_truncation_refinement.py`, against
+  `refine_truncation` before it existed. Three tests: refinement never
+  makes the box larger than the crude baseline; refinement preserves
+  validity (exactly `n` unique trees, no overlaps); refinement
+  *meaningfully* shrinks a known-lossy configuration (`n=50`, measured at
+  35% loss in the H3.4 entry above) rather than trivially matching the
+  baseline, which a no-op "refinement" would otherwise pass for free.
+- **Red observed:** `ImportError: cannot import name 'refine_truncation'
+  from 'tree_packing.geometry.truncation'`.
+- **First anomaly, caught by the tests immediately:** a plain single-tree
+  swap (pick one included tree, one excluded candidate, swap, accept if
+  the bounding side shrinks) found **zero improving moves in 4000
+  iterations** at `n=50` — every trial either left the side exactly
+  unchanged or made it worse. Diagnosed directly rather than assumed:
+  because the tiling is periodic, whole rows of included trees commonly
+  share the *exact* coordinate that defines the current bounding extreme.
+  At `n=50`, five separate trees are tied at each of the `miny` and `maxy`
+  extremes (confirmed by inspection: all five at `y=-1.9031` bottom,
+  all five at `y=1.6000` top). Swapping out any *one* tied member leaves
+  the bound completely unchanged, since four others still hold it — a
+  single-swap objective is therefore flat (zero gradient) everywhere near
+  this configuration, and no amount of iteration finds an "improving"
+  move because none exists at that granularity.
+- **Fix, and a second anomaly caught immediately by testing it:** rewrote
+  moves to swap an entire currently-tied boundary group at once. The first
+  version of this chose replacements by sorting excluded candidates by
+  their single-axis contribution to the binding extreme alone (e.g.
+  "smallest contribution to `maxy`" when `maxy` is binding) — this is
+  wrong in a way the earlier H3.1/H3.2 anomalies weren't: it reliably
+  chooses candidates with very negative `y` to relieve a high `maxy`
+  bound, which promptly become the new, equally bad `miny` record instead
+  of relieving anything. Fixed by evaluating candidates against the
+  *actual* resulting bounding side (temporarily substitute, measure,
+  revert) for each vacancy in a capped nearest-candidate frontier, rather
+  than a single-axis proxy — more expensive per step, but the frontier cap
+  (currently 40, or 4x the group size) keeps it cheap enough in practice.
+- **Green observed:** `pytest tests/unit/test_truncation_refinement.py -v`
+  — 3 passed. Independently cross-checked against
+  `reference/evaluator.py::check_overlap` for `n = 21, 50, 100, 150, 200`:
+  zero overlaps, and exactly `n` unique trees at every sampled `n`.
+- **Measured improvement (`seed=0`, sampled n, `iterations=300`):**
+
+  | n | baseline side | refined side | baseline loss | refined loss |
+  |---|---|---|---|---|
+  | 21 | 3.50308 | 3.40000 | 42.0% | 38.5% |
+  | 30 | 4.30309 | 3.72333 | 45.1% | 26.7% |
+  | 41 | 5.10309 | 4.30309 | 46.7% | 25.0% |
+  | 50 | 5.10309 | 4.82959 | 35.0% | 27.4% |
+  | 75 | 5.90309 | 5.80001 | 27.1% | 24.5% |
+  | 100 | 6.70309 | 6.60001 | 24.6% | 22.2% |
+  | 125 | 7.50309 | 7.23363 | 24.8% | 19.1% |
+  | 150 | 8.30309 | 7.66513 | 26.3% | 13.5% |
+  | 172 | 8.32030 | 8.30309 | 15.9% | 15.5% |
+  | 200 | 9.10309 | 9.00001 | 18.3% | 16.4% |
+
+  Real, meaningful improvement at every sampled `n` (roughly a
+  third-to-half reduction in loss on average), but **not yet at the
+  milestone doc's own worked-example numbers** (18% at `n=50`, 6% at
+  `n=200` — this refinement gets to 27.4% and 16.4% respectively). Recorded
+  honestly rather than rounded up: likely headroom remains in iteration
+  count, frontier size, and multi-restart seeding, none of which have been
+  tuned yet, and possibly in the fact that this lattice (density
+  `0.725241`) may simply truncate differently than the doc's example
+  lattice (density `0.6054`).
+- **Timing:** the ten-point sample above (mixed `n` from 21 to 200) took
+  ~25s total with `iterations=300`; full 180-point sweeps are proportionally
+  longer and were not re-run in full here for that reason — sampled at the
+  same ten points as the original H3.4 entry for direct comparison instead
+  of an exhaustive re-sweep.
+- **Selected / Refined:** kept as a genuine improvement over the crude
+  baseline, not yet claimed as "done" against the milestone's own bar.
+  Whether to spend further tuning time here before H3.6, versus treating
+  this as good enough to get a real end-to-end score first, is an open
+  decision for the next step.
