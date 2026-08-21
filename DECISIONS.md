@@ -70,3 +70,26 @@ comparison baseline for this milestone is therefore the tight rectangular grid,
 not the sparse `1.1` baseline. That honest baseline measured `157.986`, while
 the recorded M2 solve reached `157.0885749337038018263178` in `181.45s` and
 kept the regression gate green.
+
+### Addendum (2026-08-21 exit-gate closure audit)
+
+Two things surfaced while closing the M2 exit gate that belong here rather
+than only in `LAB_NOTEBOOK.md`, because they are decisions with consequences
+for M3, not just observations:
+
+1. **Insertion and ratchet are implemented but not wired into `solve`.**
+   `src/tree_packing/optimize/base.py::solve_portfolio` only calls the strategy portfolio and
+   `best_rotation`; it never calls `grow_layout` (insertion) or
+   `ratchet_layouts` (ratchet). Both exist and are unit-tested in isolation.
+   The committed score, `157.0885749337038018263178`, is therefore a grid +
+   rotation result only. Decision: leave this unwired for M2's closure — the
+   milestone's exit gate requires the score and the regression test to hold,
+   not that every implemented pass be load-bearing in production yet — but
+   M3 must not assume insertion/ratchet contributions are already banked
+   into the M2 baseline it inherits.
+2. **The regression test's tolerance is a decision, not a default.** Naive
+   exact-Decimal monotonicity checking on the committed `score_terms` fails
+   at ~1e-25 magnitude due to fixed-precision serialization, on data that is
+   otherwise correct. `tests/regression/test_monotonicity.py` uses
+   `TOLERANCE = 1e-20`, pinned by a second test to stay eleven orders below
+   `CLEARANCE_EPS` so it cannot be loosened into masking a real defect.

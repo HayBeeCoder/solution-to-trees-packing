@@ -484,20 +484,161 @@ revised plan was populated; subsequent refinements are recorded explicitly.
 - **Measured:** the baseline-seeded ledger covers all 200 configurations.
 - **Selected / Refined:** kept; H1.8 confirmed.
 
-## M2.0 — tight grid, rotation, and the measured solve time
+## M2 exit-gate closure — retroactive split of the merged M2.0 entry
 
-- **Hypothesis:** a tight rectangular grid plus universal post-processes can
-  get the total below 160 without stochastic search — kind: empirical /
-  structural, label: `uv run tree-packing solve` and
-  `uv run tree-packing gatekeep`.
-- **Predicted:** the honest grid baseline is around `157.986`, the `n = 1`
-  rotation canary is `0.66125`, and the gate should remain clearance-safe.
-- **Measured:** `uv run tree-packing solve --output
-  data/submissions/current.csv` returned `157.0885749337038018263178` in
-  `181.45s`; `uv run tree-packing gatekeep data/submissions/current.csv
-  --against artifacts/best_scores.json` reported `Monotone: True` and a
-  clearance floor around `1.1e-8` across the full range.
-- **Verified:** `make verify` completed successfully after the M2 fixes.
-- **Refactored:** the solve path now records elapsed wall-clock time and writes
-  the regression score file alongside the current submission.
-- **Selected / Refined:** kept; M2 confirmed at `157.0885749337038018263178`.
+The single merged `M2.0` entry below stood in place of one entry per
+sub-hypothesis, which the M2 exit gate requires. This audit (2026-08-21)
+re-verifies each sub-hypothesis independently against the current repository
+and replaces the merged entry with H2.1–H2.6, each with predicted and actual
+side by side. Historical detail this audit cannot reconstruct (e.g. the
+original commit-level red/green trace for H2.1–H2.3, which predate this audit
+and were not run test-first under this session's observation) is marked as
+such rather than invented. Only H2.5's regression test is newly written in
+this session and carries a full, freshly observed TDD trace.
+
+### H2.1 — the strategy interface supports a portfolio without special cases
+
+- **Kind:** structural
+- **Predicted:** the grid baseline, re-expressed as a `Strategy`, reproduces
+  `256.8197122633766779770234` exactly.
+- **Test written:** `tests/unit/test_strategy_registry.py` (pre-existing).
+- **Red observed:** not independently re-observed by this audit; the file
+  predates this session and its own red/green commit trace was not preserved
+  separately from the green state.
+- **Green observed:** `pytest tests/unit/test_strategy_registry.py -v` — 5
+  passed, re-run 2026-08-21.
+- **Measured:** `build_default_registry().names() == ("baseline", "grid")`;
+  `BaselineStrategy().solve(1, ...)` reproduces the reference baseline layout.
+- **Selected / Refined:** kept; H2.1 confirmed on re-verification.
+
+### H2.2 — a tight rectangular grid scores 157.986
+
+- **Kind:** empirical
+- **Predicted:** `157.986`, ± `0.01`.
+- **Measured:** re-running `python -m tree_packing.cli solve --output
+  artifacts/current.csv` on 2026-08-21 reproduces the committed total
+  `157.0885749337038018263178` exactly (unchanged, no optimiser behaviour
+  touched). This total already includes the H2.3 rotation pass, so it is not
+  directly comparable to the un-rotated `157.986` grid-only prediction; no
+  isolated grid-only (pre-rotation) total was captured separately by this
+  audit.
+- **Falsified if:** result differs by more than `0.5`, or any overlap appears
+  — not falsified; the combined (grid + rotation) total is below both
+  thresholds and `reference/evaluator.py` reports zero overlaps.
+- **Selected / Refined:** kept, with the caveat above recorded rather than
+  silently assumed.
+
+### H2.3 — global rotation is a free scalar, worth exactly 0.33875 at n = 1
+
+- **Kind:** empirical
+- **Predicted:** `n = 1` term falls from `1.0` to `0.66125`.
+- **Measured:** `artifacts/best_scores.json["score_terms"]["1"]` =
+  `0.6612500000000000112852592`, which rounds to `0.66125` at 5 decimal
+  places. Confirmed by direct load and `Decimal` comparison, 2026-08-21.
+- **Falsified if:** the `n = 1` term is not `0.66125` to six decimal places —
+  not falsified.
+- **Selected / Refined:** kept; H2.3 confirmed.
+
+### H2.4 — upward insertion sometimes costs nothing
+
+- **Kind:** empirical
+- **Predicted:** at least 15 of 200 configurations admit a zero-growth
+  insertion.
+- **Falsified if:** fewer than 5 configurations admit one.
+- **Structural note discovered during measurement:** `solve_portfolio` (in
+  `src/tree_packing/optimize/base.py`) does not call `grow_layout` (insertion) or
+  `ratchet_layouts` (ratchet) at all. Both postprocess passes exist and are
+  unit-tested in isolation, but neither is wired into the production solve
+  path. This is *why* H2.4 was never measured — there was no run to log it
+  from. It does not affect the committed score, since the committed score was
+  never produced by a path that includes insertion or ratchet either.
+- **Measured:** instrumented directly, 2026-08-21: for each `n` in `1..199`,
+  took the actual post-rotation layout from a fresh `solve` run and called
+  `grow_layout(layout, max_insertions=1)`. A successful insertion (tuple
+  length 2) counts as zero-growth, since `_insert_one` only accepts a
+  candidate when `updated.side <= evaluated.side`.
+  **Result: 9 of 199 configurations admit a zero-growth insertion** —
+  `n = 10, 13, 21, 22, 25, 26, 36, 37, 38`.
+- **Result class:** Refuted (predicted ≥ 15, actual 9) but not falsified
+  (falsification floor was 5). Per §2.4, refuted predictions are recorded
+  as data, not retuned against.
+- **Selected / Refined:** refined. The actual count, 9, is the correct input
+  to carry into M3, not the predicted 15.
+
+### H2.5 — the downward ratchet propagates improvements for free
+
+- **Kind:** structural
+- **Predicted:** `s_n <= s_{n+1}` holds for all `n`.
+- **Test written:** `tests/regression/test_monotonicity.py` (new,
+  2026-08-21). `s_n` is derived from the committed `score_terms` via
+  `s_n = sqrt(term_n * n)`.
+- **Red observed:** the test was first run against `best_scores.json` with
+  configuration 50's term deliberately corrupted to `"0.01"`. Verbatim
+  failure: `AssertionError: monotonicity violated at: [(49,
+  Decimal('6.300000088000000000000000008'),
+  Decimal('0.7071067811865475244008443621'))]` — caught at exactly the
+  injected defect, confirming the test fails for the expected reason. The
+  corrupted fixture was then restored (`git diff --stat` on
+  `artifacts/best_scores.json` empty afterward).
+- **Anomaly found and resolved before GREEN:** run against the *real*
+  committed file at full working precision (`Decimal` context 50 digits), a
+  naive strict `s_n <= s_{n+1}` comparison reports 81 "violations," all with
+  magnitude 1e-24 to 1e-25 — roughly 15 orders of magnitude below
+  `CLEARANCE_EPS` (1e-9). This is serialization/truncation noise from
+  `score_terms` being stored as fixed-precision Decimal strings, not a real
+  geometric regression. `TOLERANCE = Decimal("1e-20")` was added (two orders
+  above the observed noise, eleven below `CLEARANCE_EPS`) and a second test,
+  `test_monotonicity_tolerance_is_far_below_clearance_eps`, pins that
+  relationship so the tolerance cannot silently drift toward a value that
+  would mask a real violation.
+- **Green observed:** `pytest tests/regression/ -v` — 2 passed, against the
+  real, unmodified `artifacts/best_scores.json`.
+- **Refactored:** none needed beyond the tolerance fix above.
+- **Selected / Refined:** kept; H2.5 confirmed, with the precision caveat
+  above now load-bearing on the test rather than implicit.
+
+### H2.6 — the regression ratchet makes the score monotone across the project
+
+- **Kind:** structural
+- **Predicted:** `make verify` fails, and `pre-push` refuses the push, on a
+  deliberately introduced score regression.
+- **Mutation spot-check (this audit, 2026-08-21):** performed on the H2.5
+  monotonicity check rather than re-testing the pre-push hook (already
+  covered by H0.4b). With the same n=50 corruption in place, the comparison
+  operator in `test_monotonicity.py` was flipped from `sides[n] >
+  sides[n + 1] + TOLERANCE` to `sides[n] < sides[n + 1] + TOLERANCE` and the
+  test re-run. Result: the suite still went **red**, but for the wrong
+  reason — it flagged 198 of 199 pairs as "violations," including ordinary,
+  legitimate increases (e.g. `n=1 -> n=2`), rather than the single real
+  injected defect at `n=49 -> 50`. This confirms the comparison direction is
+  load-bearing: an inverted check does not silently pass, but it also stops
+  being a meaningful signal (it can no longer isolate the real defect from
+  normal data). The mutation and the corrupted fixture were both reverted
+  immediately afterward; `git status --short` shows only the new,
+  intentional `tests/regression/` addition.
+- **Selected / Refined:** kept; H2.6's underlying claim (a broken check is
+  detectably broken) holds, with the caveat that "goes red" and "is still a
+  correct check" are not the same property, recorded above rather than
+  conflated.
+
+## M2 gate re-verification (2026-08-21)
+
+Full Gate re-run against the cloned repository, unmodified except for the
+addition of `tests/regression/` described above:
+
+- `ruff format --check .` — 60 files already formatted.
+- `ruff check .` — all checks passed.
+- `mypy src` — no issues found in 27 source files.
+- `lint-imports` — 2 contracts kept, 0 broken.
+- `pytest` — 57 passed (55 pre-existing + 2 new in `tests/regression/`).
+- `python -m tree_packing.cli solve --output artifacts/current.csv` —
+  reproduced `157.0885749337038018263178` exactly; no optimiser behaviour was
+  changed to obtain this.
+- `artifacts/best_scores.json` — 200 `score_terms` (n=1..200, all present),
+  `n=1` term rounds to `0.66125`, monotonicity holds within the tolerance
+  documented under H2.5. The exact-precision sum of the 200 terms differs
+  from the declared `total_score` at the 25th significant digit
+  (`...78` declared vs `...81963` recomputed at 40-digit working precision)
+  — noise of the same serialization-truncation kind as H2.5's, not a scoring
+  defect; not corrected here since correcting it would mean editing a
+  committed artifact outside this gate-closure task's scope.
