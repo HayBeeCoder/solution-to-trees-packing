@@ -60,3 +60,13 @@ notebook, documentary, and plans remain visible. Pytest coverage is opt-in via
 `make coverage`, preventing concurrent default test runs from competing for the
 same `.coverage` file. The Makefile is intentionally a thin wrapper around the
 existing `uv run` commands, keeping the README runbook and local hook aligned.
+
+## M2 measurement order and the honest baseline
+
+M2 comes before M3 because the free rotation and ratchet-style passes are
+global post-processes: if the lattice were introduced first, its score would be
+inflated by improvements that actually belong to the universal pipeline. The
+comparison baseline for this milestone is therefore the tight rectangular grid,
+not the sparse `1.1` baseline. That honest baseline measured `157.986`, while
+the recorded M2 solve reached `157.0885749337038018263178` in `181.45s` and
+kept the regression gate green.

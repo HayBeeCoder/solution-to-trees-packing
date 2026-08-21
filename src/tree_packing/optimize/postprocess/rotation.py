@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from decimal import Decimal
 
-from tree_packing.optimize.base import evaluate_layout
+from tree_packing.optimize.base import measure_layout
 from tree_packing.optimize.types import Layout, Placement
 
 _PHI = (1.0 + math.sqrt(5.0)) / 2.0
@@ -33,7 +33,7 @@ def rotate_layout(layout: Layout, angle_degrees: float) -> Layout:
 
 
 def _evaluated_rotation(layout: Layout, angle_degrees: float) -> Layout:
-    return evaluate_layout(rotate_layout(layout, angle_degrees))
+    return measure_layout(rotate_layout(layout, angle_degrees))
 
 
 def best_rotation(layout: Layout, coarse_step: float = 5.0, refinements: int = 10) -> Layout:

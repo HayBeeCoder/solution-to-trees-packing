@@ -74,9 +74,25 @@ def test_seed_ledger_from_baseline_populates_all_configurations(tmp_path) -> Non
 
 def test_write_best_scores_serializes_total_and_terms(tmp_path) -> None:
     root = tmp_path / "artifacts"
-    layouts = [_layout("1.0", "1e-6"), _layout("0.9", "1e-6")]
+    layouts = [
+        Layout(
+            n=1,
+            placements=(Placement(x=1.0, y=2.0, deg=1.0),),
+            side=Decimal("1.0"),
+            score_term=Decimal("1.0"),
+            min_clearance=Decimal("1e-6"),
+        ),
+        Layout(
+            n=2,
+            placements=(Placement(x=1.0, y=2.0, deg=1.0),),
+            side=Decimal("1.0"),
+            score_term=Decimal("0.9"),
+            min_clearance=Decimal("1e-6"),
+        ),
+    ]
     best_scores = write_best_scores(root, layouts)
     assert best_scores == root / "best_scores.json"
     text = best_scores.read_text(encoding="utf-8")
     assert '"total_score": "1.9"' in text
     assert '"1": "1.0"' in text
+    assert '"2": "0.9"' in text

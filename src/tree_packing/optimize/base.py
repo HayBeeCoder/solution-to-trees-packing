@@ -94,6 +94,26 @@ def evaluate_layout(layout: Layout) -> Layout:
     )
 
 
+def measure_layout(layout: Layout) -> Layout:
+    """Compute only the score-facing metrics for search heuristics."""
+    placements = tuple(
+        Placement(x=float(placement.x), y=float(placement.y), deg=float(placement.deg))
+        for placement in layout.placements
+    )
+    polygons = [
+        create_tree_polygon(placement.x, placement.y, placement.deg) for placement in placements
+    ]
+    side = bounding_box_side(polygons)
+    score_term = configuration_score(side, layout.n)
+    return Layout(
+        n=layout.n,
+        placements=placements,
+        side=side,
+        score_term=score_term,
+        min_clearance=None,
+    )
+
+
 def build_default_registry() -> StrategyRegistry:
     """Create the default strategy portfolio."""
     from tree_packing.optimize.strategies.baseline import BaselineStrategy
@@ -107,7 +127,6 @@ def build_default_registry() -> StrategyRegistry:
 
 def solve_portfolio(ctx: SolveContext, registry: StrategyRegistry | None = None) -> StrategyResult:
     """Solve the configured range and apply the universal post-processes."""
-    from tree_packing.optimize.postprocess.ratchet import ratchet_layouts
     from tree_packing.optimize.postprocess.rotation import best_rotation
 
     active_registry = registry or build_default_registry()
@@ -118,7 +137,7 @@ def solve_portfolio(ctx: SolveContext, registry: StrategyRegistry | None = None)
             raise ValueError(f"No strategy produced a layout for n={n}")
         layouts.append(best_rotation(layout))
 
-    ratcheted = ratchet_layouts(tuple(layouts))
+    ratcheted = tuple(evaluate_layout(layout) for layout in layouts)
     total_score = sum(
         (layout.score_term for layout in ratcheted if layout.score_term is not None),
         Decimal("0"),

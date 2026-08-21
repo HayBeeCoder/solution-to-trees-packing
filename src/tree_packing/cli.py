@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
+from time import perf_counter
 
 from tree_packing import config
 from tree_packing.baseline import build_baseline
@@ -39,9 +41,12 @@ def _generate(output: Path) -> int:
 def _solve(output: Path, strategies: tuple[str, ...]) -> int:
     from tree_packing.optimize import SolveContext
 
+    started_at = datetime.now(UTC)
+    started_perf = perf_counter()
     ctx = SolveContext(strategy_names=strategies)
     registry = build_default_registry()
     result = solve_portfolio(ctx, registry)
+    elapsed_s = perf_counter() - started_perf
 
     write_submission({layout.n: layout.as_tuples() for layout in result.layouts}, output)
 
@@ -51,8 +56,8 @@ def _solve(output: Path, strategies: tuple[str, ...]) -> int:
         params={"strategies": list(strategies)},
         seed=ctx.seed,
         git_sha="local",
-        started_at="1970-01-01T00:00:00Z",
-        wall_clock_s=0.0,
+        started_at=started_at.isoformat().replace("+00:00", "Z"),
+        wall_clock_s=elapsed_s,
         budget=Budget(kind="evaluations", value=len(result.layouts)),
         experiment=False,
         n_range=ctx.n_range,
@@ -64,6 +69,7 @@ def _solve(output: Path, strategies: tuple[str, ...]) -> int:
     print(f"Submission saved to: {output}")
     print(f"Total rows: {sum(range(config.MIN_TREES, config.MAX_TREES + 1))}")
     print(f"TOTAL SCORE: {result.total_score}")
+    print(f"Elapsed: {elapsed_s:.2f}s")
     return 0
 
 

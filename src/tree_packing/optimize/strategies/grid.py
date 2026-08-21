@@ -10,6 +10,10 @@ from tree_packing.optimize.types import Layout, Placement
 
 _X_PITCH = 0.7 + float(config.CLEARANCE_EPS)
 _Y_PITCH = 1.0 + float(config.CLEARANCE_EPS)
+_PITCH_MARGIN = 1e-8
+
+_X_PITCH += _PITCH_MARGIN
+_Y_PITCH += _PITCH_MARGIN
 
 
 def _best_column_count(n: int) -> int:

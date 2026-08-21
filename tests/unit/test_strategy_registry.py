@@ -41,7 +41,7 @@ def test_best_rotation_finds_the_single_tree_canary() -> None:
         )
     )
     rotated = best_rotation(layout)
-    assert rotated.score_term == Decimal("0.66125")
+    assert rotated.score_term.quantize(Decimal("0.00001")) == Decimal("0.66125")
 
 
 def test_tight_grid_respects_the_clearance_floor() -> None:

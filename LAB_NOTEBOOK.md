@@ -483,3 +483,21 @@ revised plan was populated; subsequent refinements are recorded explicitly.
   only the arg-min view.
 - **Measured:** the baseline-seeded ledger covers all 200 configurations.
 - **Selected / Refined:** kept; H1.8 confirmed.
+
+## M2.0 — tight grid, rotation, and the measured solve time
+
+- **Hypothesis:** a tight rectangular grid plus universal post-processes can
+  get the total below 160 without stochastic search — kind: empirical /
+  structural, label: `uv run tree-packing solve` and
+  `uv run tree-packing gatekeep`.
+- **Predicted:** the honest grid baseline is around `157.986`, the `n = 1`
+  rotation canary is `0.66125`, and the gate should remain clearance-safe.
+- **Measured:** `uv run tree-packing solve --output
+  data/submissions/current.csv` returned `157.0885749337038018263178` in
+  `181.45s`; `uv run tree-packing gatekeep data/submissions/current.csv
+  --against artifacts/best_scores.json` reported `Monotone: True` and a
+  clearance floor around `1.1e-8` across the full range.
+- **Verified:** `make verify` completed successfully after the M2 fixes.
+- **Refactored:** the solve path now records elapsed wall-clock time and writes
+  the regression score file alongside the current submission.
+- **Selected / Refined:** kept; M2 confirmed at `157.0885749337038018263178`.
