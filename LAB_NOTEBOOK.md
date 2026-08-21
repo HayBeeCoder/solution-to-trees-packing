@@ -281,6 +281,24 @@ revised plan was populated; subsequent refinements are recorded explicitly.
   `pre-commit run verify --hook-stage pre-push --all-files`; the hook failed
   with `make: *** [forced_failure] Error 1`. Removed the mutation immediately.
 
+## M0.4 — clean-room reproduction
+
+- **Hypothesis:** a fresh clone reproduces the baseline under the locked
+  environment — kind: structural, label: `uv sync --locked && make verify`.
+- **Predicted:** 34 tests pass and the internal evaluator prints
+  `256.8197122633766779770234`.
+- **Test written:** operational clean-room gate; no separate unit test applies.
+- **Red observed:** no pre-implementation red state applies to this operational
+  environment check; its executable label is the clean-room command itself.
+- **Generated:** locked runbook, Makefile verification target, and local hook.
+- **Green observed:** a new clone at `/tmp/tree-packing-cleanroom.X2lAUk/repo`
+  completed `uv sync --locked && make verify`; 34 tests passed in 17.01s, the
+  internal score was `256.8197122633766779770234`, and the official evaluator
+  displayed `256.819712` with no overlaps.
+- **Refactored:** none needed.
+- **Measured:** score is byte-for-byte identical to the M0 target.
+- **Selected / Refined:** kept; H0.4 confirmed.
+
 ## M0.5 — coverage is opt-in
 
 - **Hypothesis:** default pytest execution does not enable coverage — kind:

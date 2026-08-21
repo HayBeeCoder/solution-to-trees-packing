@@ -175,5 +175,8 @@ gates and any additional implementation it requires.
   path and submission placements were not changed.
 - Recorded red/green TDD evidence for each new structural check in the lab
   notebook. A deliberate temporary Makefile failure was refused by the
-  installed pre-push hook and then removed. Final full-gate and clean-room
-  observations are recorded with the M0 completion evidence.
+  installed pre-push hook and then removed.
+- Fresh clone evidence: `uv sync --locked && make verify` installed the locked
+  environment, passed all 34 tests, returned the internal score
+  `256.8197122633766779770234`, and the official evaluator displayed
+  `256.819712` with no overlaps.
