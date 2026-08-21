@@ -15,8 +15,10 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import cast
 
 import numpy as np
+import numpy.typing as npt
 from shapely.geometry import Polygon
 
 from tree_packing import config
@@ -25,6 +27,7 @@ from tree_packing.geometry.neighbours import enumerate_neighbour_vectors
 from tree_packing.validation.clearance import min_pairwise_clearance
 
 _NEIGHBOUR_RADIUS = 1.6
+Matrix2D = npt.NDArray[np.float64]
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,9 +103,10 @@ def lattice_points_near(
     only close to the origin *after* being shifted by an offset such as
     ``(u, v)`` — the case the self-neighbour enumeration cannot cover.
     """
-    matrix = np.column_stack([np.asarray(a, dtype=float), np.asarray(b, dtype=float)])
-    inverse = np.linalg.inv(matrix)
-    target_coeffs = inverse @ np.asarray(target, dtype=float)
+    matrix = cast(Matrix2D, np.column_stack([np.asarray(a, dtype=float), np.asarray(b, dtype=float)]))
+    inverse = cast(Matrix2D, np.linalg.inv(matrix))
+    target_vec = cast(Matrix2D, np.asarray(target, dtype=float))
+    target_coeffs = inverse @ target_vec
     row_sums = np.sum(np.abs(inverse), axis=1)
     bound = math.ceil(radius * float(np.max(row_sums))) + 1
 
