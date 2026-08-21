@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from decimal import Decimal
 from pathlib import Path
@@ -127,6 +128,28 @@ def _load_layouts(path: Path) -> list[dict[str, Any]]:
         for line in handle:
             layouts.append(json.loads(line))
     return layouts
+
+
+def write_best_scores(root: str | Path, layouts: Sequence[Layout]) -> Path:
+    """Persist the committed regression target derived from the solved layouts."""
+    root_path = Path(root)
+    best_scores_path = root_path / "best_scores.json"
+    payload = {
+        "total_score": str(
+            sum(
+                (layout.score_term for layout in layouts if layout.score_term is not None),
+                Decimal("0"),
+            )
+        ),
+        "score_terms": {
+            str(layout.n): str(layout.score_term)
+            for layout in layouts
+            if layout.score_term is not None
+        },
+    }
+    best_scores_path.parent.mkdir(parents=True, exist_ok=True)
+    best_scores_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return best_scores_path
 
 
 def build_ledger(root: str | Path = "artifacts") -> dict[str, LedgerEntry]:

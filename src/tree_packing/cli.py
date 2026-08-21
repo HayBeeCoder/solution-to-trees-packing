@@ -10,6 +10,15 @@ from pathlib import Path
 from tree_packing import config
 from tree_packing.baseline import build_baseline
 from tree_packing.geometry import create_tree_polygon
+from tree_packing.optimize import (
+    Budget,
+    RunManifest,
+    build_default_registry,
+    build_ledger,
+    solve_portfolio,
+    store_run,
+    write_best_scores,
+)
 from tree_packing.scoring import bounding_box_side, configuration_score
 from tree_packing.serialization import load_submission, write_submission
 from tree_packing.validation import (
@@ -24,6 +33,37 @@ def _generate(output: Path) -> int:
     write_submission(build_baseline(), output)
     print(f"Submission saved to: {output}")
     print("Total rows: 20100")
+    return 0
+
+
+def _solve(output: Path, strategies: tuple[str, ...]) -> int:
+    from tree_packing.optimize import SolveContext
+
+    ctx = SolveContext(strategy_names=strategies)
+    registry = build_default_registry()
+    result = solve_portfolio(ctx, registry)
+
+    write_submission({layout.n: layout.as_tuples() for layout in result.layouts}, output)
+
+    manifest = RunManifest(
+        run_id=ctx.run_id,
+        strategy="portfolio",
+        params={"strategies": list(strategies)},
+        seed=ctx.seed,
+        git_sha="local",
+        started_at="1970-01-01T00:00:00Z",
+        wall_clock_s=0.0,
+        budget=Budget(kind="evaluations", value=len(result.layouts)),
+        experiment=False,
+        n_range=ctx.n_range,
+    )
+    store_run(ctx.artifacts_root, manifest, list(result.layouts))
+    build_ledger(ctx.artifacts_root)
+    write_best_scores(ctx.artifacts_root, result.layouts)
+
+    print(f"Submission saved to: {output}")
+    print(f"Total rows: {sum(range(config.MIN_TREES, config.MAX_TREES + 1))}")
+    print(f"TOTAL SCORE: {result.total_score}")
     return 0
 
 
@@ -89,6 +129,13 @@ def _gatekeep(submission: Path) -> int:
     return 0 if report.is_valid else 1
 
 
+def _gatekeep_against(submission: Path, against: Path) -> int:
+    report = gatekeep_submission(submission, against=against)
+    for line in report_lines(report):
+        print(line)
+    return 0 if report.is_valid else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI parser."""
     parser = argparse.ArgumentParser(description="Christmas Tree Packing baseline tools")
@@ -97,12 +144,22 @@ def build_parser() -> argparse.ArgumentParser:
     generate = subparsers.add_parser("generate", help="generate the grid baseline")
     generate.add_argument("--output", type=Path, default=Path("submission.csv"))
 
+    solve = subparsers.add_parser("solve", help="solve using the strategy portfolio")
+    solve.add_argument("--output", type=Path, default=Path("data/submissions/current.csv"))
+    solve.add_argument(
+        "--strategy",
+        action="append",
+        default=[],
+        help="restrict solve to one or more registered strategies",
+    )
+
     evaluate = subparsers.add_parser("evaluate", help="evaluate a submission")
     evaluate.add_argument("submission", type=Path)
     evaluate.add_argument("--quiet", action="store_true")
 
     gatekeep = subparsers.add_parser("gatekeep", help="run the full disk-backed gatekeeper")
     gatekeep.add_argument("submission", type=Path)
+    gatekeep.add_argument("--against", type=Path)
 
     visualize = subparsers.add_parser("visualize", help="visualize one configuration")
     visualize.add_argument("submission", type=Path)
@@ -116,10 +173,14 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "generate":
         return _generate(args.output)
+    if args.command == "solve":
+        return _solve(args.output, tuple(args.strategy))
     if args.command == "evaluate":
         return _evaluate(args.submission, args.quiet)
     if args.command == "gatekeep":
-        return _gatekeep(args.submission)
+        if args.against is None:
+            return _gatekeep(args.submission)
+        return _gatekeep_against(args.submission, args.against)
     return _visualize(args.submission, args.n)
 
 

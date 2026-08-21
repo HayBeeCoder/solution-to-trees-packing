@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from decimal import Decimal
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -34,13 +36,31 @@ class GatekeeperReport:
     validation_errors: tuple[str, ...]
     configurations: tuple[ConfigurationReport, ...]
     total_score: Decimal | None
+    against: Path | None = None
+    regression_errors: tuple[str, ...] = ()
 
     @property
     def is_valid(self) -> bool:
-        return not self.validation_errors and all(
-            not report.overlap_pairs and report.min_clearance >= config.CLEARANCE_EPS
-            for report in self.configurations
+        monotone = all(
+            earlier.score_term <= later.score_term
+            for earlier, later in pairwise(self.configurations)
         )
+        return (
+            not self.validation_errors
+            and not self.regression_errors
+            and monotone
+            and all(
+                not report.overlap_pairs and report.min_clearance >= config.CLEARANCE_EPS
+                for report in self.configurations
+            )
+        )
+
+
+def _load_best_scores(path: Path) -> tuple[Decimal, dict[int, Decimal]]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    total = Decimal(str(data["total_score"]))
+    score_terms = {int(key): Decimal(str(value)) for key, value in data["score_terms"].items()}
+    return total, score_terms
 
 
 def _configuration_report(n: int, rows: Any) -> ConfigurationReport:
@@ -60,7 +80,7 @@ def _configuration_report(n: int, rows: Any) -> ConfigurationReport:
     )
 
 
-def gatekeep_submission(path: str | Path) -> GatekeeperReport:
+def gatekeep_submission(path: str | Path, against: str | Path | None = None) -> GatekeeperReport:
     """Read ``path`` from disk and validate it end-to-end."""
     submission_path = Path(path)
     frame = load_submission(submission_path)
@@ -72,6 +92,7 @@ def gatekeep_submission(path: str | Path) -> GatekeeperReport:
             validation_errors=validation_errors,
             configurations=(),
             total_score=None,
+            against=Path(against) if against is not None else None,
         )
 
     configurations = tuple(
@@ -79,11 +100,35 @@ def gatekeep_submission(path: str | Path) -> GatekeeperReport:
         for n in range(config.MIN_TREES, config.MAX_TREES + 1)
     )
     total_score = sum((report.score_term for report in configurations), Decimal("0"))
+    monotone = all(
+        earlier.score_term <= later.score_term for earlier, later in pairwise(configurations)
+    )
+    regression_errors: list[str] = []
+    if not monotone:
+        regression_errors.append("score terms are not monotone across n")
+    best_path = Path(against) if against is not None else None
+    if best_path is not None:
+        best_total, best_terms = _load_best_scores(best_path)
+        if total_score > best_total:
+            regression_errors.append(
+                f"total score {total_score} exceeds recorded best {best_total}"
+            )
+        for report in configurations:
+            expected = best_terms.get(report.n)
+            if expected is None:
+                regression_errors.append(f"missing expected score term for n={report.n}")
+                continue
+            if report.score_term > expected:
+                regression_errors.append(
+                    f"n={report.n}: score {report.score_term} exceeds recorded best {expected}"
+                )
     return GatekeeperReport(
         path=submission_path,
         validation_errors=(),
         configurations=configurations,
         total_score=total_score,
+        against=best_path,
+        regression_errors=tuple(regression_errors),
     )
 
 
@@ -96,6 +141,17 @@ def report_lines(report: GatekeeperReport) -> list[str]:
         return lines
 
     lines.append(f"Total score: {report.total_score}")
+    if report.against is not None:
+        lines.append(f"Against: {report.against}")
+    if report.configurations:
+        monotone = all(
+            earlier.score_term <= later.score_term
+            for earlier, later in pairwise(report.configurations)
+        )
+        lines.append(f"Monotone: {monotone}")
+    if report.regression_errors:
+        lines.append("Regression errors:")
+        lines.extend(f"  - {error}" for error in report.regression_errors)
     for config_report in report.configurations:
         lines.append(
             f"  n={config_report.n}: side={config_report.side}, "

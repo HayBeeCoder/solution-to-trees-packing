@@ -8,6 +8,7 @@ from tree_packing.optimize.ledger import (
     canonicalise_layout,
     seed_ledger_from_baseline,
     store_run,
+    write_best_scores,
 )
 from tree_packing.optimize.types import Layout, Placement
 
@@ -69,3 +70,13 @@ def test_seed_ledger_from_baseline_populates_all_configurations(tmp_path) -> Non
     ledger = seed_ledger_from_baseline(tmp_path / "artifacts")
     assert sorted(int(key) for key in ledger) == list(range(1, 201))
     assert all(entry.score_term > Decimal("0") for entry in ledger.values())
+
+
+def test_write_best_scores_serializes_total_and_terms(tmp_path) -> None:
+    root = tmp_path / "artifacts"
+    layouts = [_layout("1.0", "1e-6"), _layout("0.9", "1e-6")]
+    best_scores = write_best_scores(root, layouts)
+    assert best_scores == root / "best_scores.json"
+    text = best_scores.read_text(encoding="utf-8")
+    assert '"total_score": "1.9"' in text
+    assert '"1": "1.0"' in text

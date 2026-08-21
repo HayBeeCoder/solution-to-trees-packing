@@ -10,7 +10,7 @@ REPOSITORY_ROOT = Path(__file__).parents[2]
 
 def test_makefile_exposes_the_documented_quality_targets() -> None:
     """Each runbook target must expand without relying on shell aliases."""
-    for target in ("gate", "baseline", "verify", "coverage"):
+    for target in ("gate", "baseline", "solve", "gatekeep", "verify", "coverage"):
         result = run(
             ["make", "--dry-run", target],
             cwd=REPOSITORY_ROOT,
