@@ -48,7 +48,7 @@ def _evaluate(submission: Path, quiet: bool) -> int:
         pairs = find_overlapping_pairs(polygons)
         if pairs:
             overlap_configurations.append(n)
-            overlap_errors.extend((n, len(pairs)) for _ in [0])
+            overlap_errors.append((n, len(pairs)))
         total += configuration_score(bounding_box_side(polygons), n)
         if not quiet and n % 20 == 0:
             print(f"  Evaluated configurations 1-{n}...")
@@ -57,8 +57,8 @@ def _evaluate(submission: Path, quiet: bool) -> int:
         print("OVERLAP ERRORS DETECTED:")
         for n, count in overlap_errors[:10]:
             print(f"  - Configuration n={n}: {count} overlapping pairs")
-        if len(overlap_configurations) > 10:
-            print(f"  ... and {len(overlap_configurations) - 10} more")
+        if len(overlap_errors) > 10:
+            print(f"  ... and {len(overlap_errors) - 10} more")
         return 1
 
     print(f"TOTAL SCORE: {total}")
