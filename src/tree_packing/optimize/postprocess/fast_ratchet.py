@@ -3,7 +3,7 @@
 The standard ``ratchet_layouts`` calls ``evaluate_layout`` for every trial
 removal, which does full Shapely polygon construction plus an STRtree
 clearance scan.  For the ratchet pass that only needs the *box side* (not
-clearance) this is O(n_shapely) per trial — roughly 15–20 minutes for a full
+clearance) this is O(n_shapely) per trial - roughly 15-20 minutes for a full
 n=21..200 sweep.
 
 The fast path here replaces that with pure arithmetic: each tree's bounding
@@ -14,7 +14,7 @@ min/max loop over cached floats — effectively free per trial removal.
 
 Measured speed-up (n=21..200, 38 improving moves found): 2.6 s vs ~15-20 min.
 Accuracy verified against ``evaluate_layout`` for a sample of n values:
-differences ≤ 5 × 10⁻¹⁶ (floating-point rounding noise, not a real gap).
+differences <= 5 x 10^-16 (floating-point rounding noise, not a real gap).
 """
 
 from __future__ import annotations
@@ -48,14 +48,14 @@ def fast_box_side(placements: tuple[Placement, ...]) -> Decimal:
 
     Returns ``Decimal('0')`` for an empty placement tuple.
     Agrees with ``evaluate_layout(...).side`` to within floating-point noise
-    (verified ≤ 5 × 10⁻¹⁶ across a range of n values).
+    (verified <= 5 x 10^-16 across a range of n values).
     """
     if not placements:
         return Decimal("0")
 
-    minx =  math.inf
+    minx = math.inf
     maxx = -math.inf
-    miny =  math.inf
+    miny = math.inf
     maxy = -math.inf
     for p in placements:
         dx_lo, dx_hi, dy_lo, dy_hi = _offsets(p.deg)
@@ -69,7 +69,7 @@ def fast_box_side(placements: tuple[Placement, ...]) -> Decimal:
         if cy + dy_hi > maxy:
             maxy = cy + dy_hi
 
-    width  = Decimal(str(maxx - minx))
+    width = Decimal(str(maxx - minx))
     height = Decimal(str(maxy - miny))
     return max(width, height)
 
@@ -85,9 +85,7 @@ def fast_ratchet(layouts: list[Layout]) -> list[Layout]:
     Returns a new list; the input is not modified.
     """
     result = list(layouts)
-    score_terms = [
-        configuration_score(fast_box_side(lay.placements), lay.n) for lay in result
-    ]
+    score_terms = [configuration_score(fast_box_side(lay.placements), lay.n) for lay in result]
 
     for idx in range(len(result) - 2, -1, -1):
         bigger = result[idx + 1]
@@ -97,7 +95,7 @@ def fast_ratchet(layouts: list[Layout]) -> list[Layout]:
         best_placements: tuple[Placement, ...] | None = None
 
         for remove_i in range(len(bigger.placements)):
-            candidate = bigger.placements[:remove_i] + bigger.placements[remove_i + 1:]
+            candidate = bigger.placements[:remove_i] + bigger.placements[remove_i + 1 :]
             side = fast_box_side(candidate)
             if best_side is None or side < best_side:
                 best_side = side

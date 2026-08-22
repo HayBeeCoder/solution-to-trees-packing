@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import pytest
 from decimal import Decimal
+
+import pytest
 
 from tree_packing.geometry.lattice import LatticeBasis
 from tree_packing.geometry.truncation import truncate_to_n
-from tree_packing.optimize.postprocess.fast_ratchet import fast_box_side
 from tree_packing.optimize.base import evaluate_layout
+from tree_packing.optimize.postprocess.fast_ratchet import fast_box_side
 from tree_packing.optimize.types import Layout, Placement
 
 _BASIS = LatticeBasis(
@@ -32,9 +33,9 @@ def test_fast_box_side_matches_shapely(n: int) -> None:
     fast = fast_box_side(layout.placements)
     shapely = evaluate_layout(layout).side
     assert shapely is not None
-    assert abs(fast - shapely) < Decimal("1e-9"), (
-        f"n={n}: fast={fast} shapely={shapely} diff={abs(fast - shapely)}"
-    )
+    assert abs(fast - shapely) < Decimal(
+        "1e-9"
+    ), f"n={n}: fast={fast} shapely={shapely} diff={abs(fast - shapely)}"
 
 
 def test_fast_box_side_empty() -> None:

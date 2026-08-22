@@ -28,7 +28,7 @@ def test_m3_total_score_within_ceiling() -> None:
     terms = {int(k): Decimal(v) for k, v in data["score_terms"].items()}
     total = sum(terms.values())
     assert total <= M3_SCORE_CEILING, (
-        f"Total score {total} exceeds M3 ceiling {M3_SCORE_CEILING} — "
+        f"Total score {total} exceeds M3 ceiling {M3_SCORE_CEILING} - "
         "a layout change has worsened the result"
     )
 
@@ -38,6 +38,4 @@ def test_m3_target_met() -> None:
     data = json.loads(BEST_SCORES_PATH.read_text(encoding="utf-8"))
     terms = {int(k): Decimal(v) for k, v in data["score_terms"].items()}
     total = sum(terms.values())
-    assert total <= M3_TARGET, (
-        f"Total score {total} exceeds M3 target {M3_TARGET}"
-    )
+    assert total <= M3_TARGET, f"Total score {total} exceeds M3 target {M3_TARGET}"
