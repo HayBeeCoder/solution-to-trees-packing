@@ -130,6 +130,7 @@ def build_default_registry() -> StrategyRegistry:
 
 def solve_portfolio(ctx: SolveContext, registry: StrategyRegistry | None = None) -> StrategyResult:
     """Solve the configured range and apply the universal post-processes."""
+    from tree_packing.optimize.postprocess.compaction import compact_layout
     from tree_packing.optimize.postprocess.fast_ratchet import fast_ratchet
     from tree_packing.optimize.postprocess.rotation import best_rotation
 
@@ -143,6 +144,13 @@ def solve_portfolio(ctx: SolveContext, registry: StrategyRegistry | None = None)
 
     ratcheted_layouts = fast_ratchet(layouts)
     ratcheted = tuple(evaluate_layout(layout) for layout in ratcheted_layouts)
+
+    final: list[Layout] = []
+    for lay in ratcheted:
+        improved = compact_layout(lay, shrink_factor=0.005, max_outer=30)
+        final.append(improved)
+
+    ratcheted = tuple(final)
     total_score = sum(
         (layout.score_term for layout in ratcheted if layout.score_term is not None),
         Decimal("0"),

@@ -14,6 +14,10 @@ baseline:
 solve:
 	uv run tree-packing solve --output data/submissions/current.csv
 
+solve-full:
+	uv run python solve_full.py
+	uv run tree-packing gatekeep data/submissions/current.csv --against artifacts/best_scores.json
+
 gatekeep:
 	uv run tree-packing gatekeep data/submissions/current.csv --against artifacts/best_scores.json
 
