@@ -53,12 +53,12 @@ def test_monotonicity_holds_across_committed_best_scores() -> None:
     assert sorted(sides) == list(range(config.MIN_TREES, config.MAX_TREES + 1))
 
     # Strategy boundary: M2 ends at n=20, lattice starts at n=21.
-    STRATEGY_BOUNDARIES = {20}  # pairs (n, n+1) that cross a strategy boundary
+    strategy_boundaries = {20}  # pairs (n, n+1) that cross a strategy boundary
 
     violations = [
         (n, sides[n], sides[n + 1])
         for n in range(config.MIN_TREES, config.MAX_TREES)
-        if n not in STRATEGY_BOUNDARIES and sides[n] > sides[n + 1] + TOLERANCE
+        if n not in strategy_boundaries and sides[n] > sides[n + 1] + TOLERANCE
     ]
     assert violations == [], f"monotonicity violated at: {violations[:5]}"
 
