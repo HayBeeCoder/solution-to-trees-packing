@@ -38,7 +38,7 @@ def _generate(output: Path) -> int:
     return 0
 
 
-def _solve(output: Path, strategies: tuple[str, ...]) -> int:
+def _solve(output: Path, strategies: tuple[str, ...], *, record_artifacts: bool = True) -> int:
     from tree_packing.optimize import SolveContext
 
     started_at = datetime.now(UTC)
@@ -62,9 +62,10 @@ def _solve(output: Path, strategies: tuple[str, ...]) -> int:
         experiment=False,
         n_range=ctx.n_range,
     )
-    store_run(ctx.artifacts_root, manifest, list(result.layouts))
-    build_ledger(ctx.artifacts_root)
-    write_best_scores(ctx.artifacts_root, result.layouts)
+    if record_artifacts:
+        store_run(ctx.artifacts_root, manifest, list(result.layouts))
+        build_ledger(ctx.artifacts_root)
+        write_best_scores(ctx.artifacts_root, result.layouts)
 
     print(f"Submission saved to: {output}")
     print(f"Total rows: {sum(range(config.MIN_TREES, config.MAX_TREES + 1))}")
@@ -158,6 +159,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="restrict solve to one or more registered strategies",
     )
+    solve.add_argument(
+        "--no-record",
+        action="store_true",
+        help="write only the submission, leaving the artifact ledger unchanged",
+    )
 
     evaluate = subparsers.add_parser("evaluate", help="evaluate a submission")
     evaluate.add_argument("submission", type=Path)
@@ -180,7 +186,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "generate":
         return _generate(args.output)
     if args.command == "solve":
-        return _solve(args.output, tuple(args.strategy))
+        return _solve(args.output, tuple(args.strategy), record_artifacts=not args.no_record)
     if args.command == "evaluate":
         return _evaluate(args.submission, args.quiet)
     if args.command == "gatekeep":
