@@ -192,7 +192,7 @@ strongly sheared basis the true violating neighbour sat at index offset (4, 2) â
 geometrically close but outside the index window. The optimiser did not solve the
 packing problem; it found the hole in the constraint set.
 
-Fix (mandatory, implemented in `geometry/lattice.py`): enumerate candidate
+Fix (mandatory, implemented in `src/tree_packing/geometry/lattice.py`): enumerate candidate
 neighbours by geometric distance (< 1.6 unscaled units) over a Gauss-reduced
 basis via `geometry.neighbours.enumerate_neighbour_vectors`. Index windows are
 prohibited. This is enforced by the property test in
