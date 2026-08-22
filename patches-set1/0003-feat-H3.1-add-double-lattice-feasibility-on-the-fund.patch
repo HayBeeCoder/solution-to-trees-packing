@@ -1,0 +1,246 @@
+From d718ebf53504b724c720bae5fb30e3d4d4bd227d Mon Sep 17 00:00:00 2001
+From: M2 Gate Closure Audit <audit@local>
+Date: Fri, 21 Aug 2026 17:36:49 +0000
+Subject: [PATCH 3/5] feat(H3.1): add double-lattice feasibility on the
+ fundamental cell
+
+src/tree_packing/geometry/lattice.py: LatticeBasis (five parameters:
+p, q, h, u, v), is_lattice_feasible, materialise_patch. Reuses
+geometry.neighbours' Gauss-reduced enumeration for same-sublattice
+neighbours (upright-upright, inverted-inverted).
+
+Anomaly caught and fixed before GREEN, which is the actual point of the
+preceding test commit: the first cross-sublattice (upright-vs-inverted)
+check reused the origin-centred neighbour enumeration, which finds lattice
+points near (u, v), not lattice points L for which (u, v) + L is near the
+origin -- the wrong question. A random basis (seed 24) was ruled internally
+feasible, materialised, and the real reference evaluator reported 5 genuine
+overlaps. Fixed with a target-centred lattice-point search
+(lattice_points_near), still geometric distance, never an index window, but
+correctly re-centred.
+
+Green: pytest tests/property/test_lattice_feasibility.py -- 5 passed, 27
+skipped (bases the internal check itself correctly rules infeasible).
+
+Full Gate green: ruff format/check, mypy (28 files), lint-imports, pytest.
+---
+ LAB_NOTEBOOK.md                      |  54 ++++++++++
+ src/tree_packing/geometry/lattice.py | 144 +++++++++++++++++++++++++++
+ 2 files changed, 198 insertions(+)
+ create mode 100644 src/tree_packing/geometry/lattice.py
+
+diff --git a/LAB_NOTEBOOK.md b/LAB_NOTEBOOK.md
+index f6149ff..de1a43e 100644
+--- a/LAB_NOTEBOOK.md
++++ b/LAB_NOTEBOOK.md
+@@ -642,3 +642,57 @@ addition of `tests/regression/` described above:
+   — noise of the same serialization-truncation kind as H2.5's, not a scoring
+   defect; not corrected here since correcting it would mean editing a
+   committed artifact outside this gate-closure task's scope.
++
++## M3 — the double-lattice backbone
++
++### H3.1 — Feasibility of a lattice is decided on the fundamental cell
++
++- **Hypothesis:** a lattice passing the internal feasibility check also
++  passes `reference/evaluator.py` on a materialised 7×7 patch, for every
++  basis tested including strongly sheared ones — kind: structural, label:
++  `tests/property/test_lattice_feasibility.py`.
++- **Predicted:** internal feasibility and evaluator-verified feasibility
++  agree on every basis tested.
++- **Test written:** `tests/property/test_lattice_feasibility.py`, importing
++  `tree_packing.geometry.lattice` before that module existed.
++- **Red observed:** `ModuleNotFoundError: No module named
++  'tree_packing.geometry.lattice'` — collection error, confirming the test
++  fails for the expected reason (the module genuinely does not exist yet),
++  not a typo or fixture problem.
++- **Generated:** `src/tree_packing/geometry/lattice.py` — `LatticeBasis`
++  (five parameters: `p, q, h, u, v`), `is_lattice_feasible`, and
++  `materialise_patch`. Reuses `geometry.neighbours.enumerate_neighbour_vectors`
++  for the two same-sublattice self-neighbour checks (upright-upright,
++  inverted-inverted), which are naturally centred on the origin.
++- **Anomaly found and fixed before GREEN (this is the actual point of
++  H3.1):** the first implementation's cross-sublattice check (upright versus
++  inverted) reused the origin-centred neighbour enumeration by adding
++  `(u, v)` to each short lattice vector. That is wrong: it finds lattice
++  points near `(u, v)`, not lattice points `L` for which `(u, v) + L` is
++  near the origin, which is the actual question ("is there an inverted tree
++  close to this upright one?"). Running the property test against 30 random
++  bases surfaced this directly — seed 24
++  (`p=1.1699, q=0.6116, h=0.7461, u=1.1659, v=-0.4565`) was ruled internally
++  feasible, materialised, and the *reference* evaluator (imported directly
++  from `reference/evaluator.py`, not the repo's own port) reported five real
++  overlaps: `[(5, 28), (7, 30), (9, 32), (11, 34), (13, 36)]`. This is
++  exactly the shared-contract §8.1 failure mode, reproduced on a new
++  sub-problem as the milestone doc warned it would be. Fixed by adding
++  `_lattice_points_near(a, b, target, radius)`, which bounds and searches
++  integer coefficients around the *target's* lattice coordinates (via the
++  same row-sum bounding technique as `geometry.neighbours`'s
++  `_coefficient_bound`, but centred on `-(u, v)` instead of the origin) —
++  geometric distance over the reduced structure of the basis, still never an
++  index window, but correctly re-centred for a non-origin query.
++- **Green observed:** `pytest tests/property/test_lattice_feasibility.py -v`
++  — 5 passed, 27 skipped (bases the internal check itself correctly ruled
++  infeasible — not a claim under test), 0 failed. The previously-failing
++  seed 24 is now among the skipped (correctly rejected), not silently
++  passing.
++- **Refactored:** none needed beyond the fix above; `mypy src` required
++  tightening `_collides`'s signature from `object` to `Polygon` rather than
++  suppressing the resulting type error.
++- **Selected / Refined:** kept; H3.1 confirmed, with the caveat that the
++  feasible region under uniform random sampling in this parameter range is
++  sparse (27/32 in the sweep), consistent with H3.2's plan to use simulated
++  annealing rather than random search to find it.
+diff --git a/src/tree_packing/geometry/lattice.py b/src/tree_packing/geometry/lattice.py
+new file mode 100644
+index 0000000..5f44e41
+--- /dev/null
++++ b/src/tree_packing/geometry/lattice.py
+@@ -0,0 +1,144 @@
++"""Double-lattice parameterisation and internal feasibility (H3.1).
++
++Five parameters describe the motif: ``a = (p, 0)``, ``b = (q, h)`` with
++``p, h > 0`` (without loss of generality — any basis can be rotated so the
++first vector is horizontal), plus the 180-degree-inverted partner offset
++``(u, v)``. Feasibility is decided on the fundamental cell using geometric
++distance over a Gauss-reduced basis (``geometry.neighbours``), never an index
++window over lattice coordinates — an index window is exactly the sec 8.1
++failure mode this milestone guards against, since a strongly sheared basis
++can have geometrically close neighbours at large, non-adjacent indices.
++"""
++
++from __future__ import annotations
++
++import math
++from dataclasses import dataclass
++
++import numpy as np
++from shapely.geometry import Polygon
++
++from tree_packing import config
++from tree_packing.geometry.core import create_tree_polygon
++from tree_packing.geometry.neighbours import enumerate_neighbour_vectors
++from tree_packing.validation.overlap import has_overlap
++
++_NEIGHBOUR_RADIUS = 1.6
++
++
++@dataclass(frozen=True, slots=True)
++class LatticeBasis:
++    """Five free parameters of a double lattice (upright + 180-degree partner)."""
++
++    p: float
++    q: float
++    h: float
++    u: float
++    v: float
++
++    def vectors(self) -> tuple[tuple[float, float], tuple[float, float]]:
++        return (self.p, 0.0), (self.q, self.h)
++
++
++def is_lattice_feasible(basis: LatticeBasis, clearance_eps: float | None = None) -> bool:
++    """Decide feasibility on the fundamental cell alone.
++
++    Checks three neighbour families, each over Gauss-reduced geometric
++    distance rather than raw lattice indices:
++    upright-upright, inverted-inverted (both use the same basis vectors, so
++    share one neighbour enumeration), and upright-inverted across the
++    ``(u, v)`` offset.
++    """
++    if basis.p <= 0 or basis.h <= 0:
++        return False
++
++    eps = float(clearance_eps if clearance_eps is not None else config.CLEARANCE_EPS)
++    a, b = basis.vectors()
++    same_sublattice_vectors = enumerate_neighbour_vectors(a, b, radius=_NEIGHBOUR_RADIUS)
++
++    origin_upright = create_tree_polygon(0.0, 0.0, 0.0)
++    origin_inverted = create_tree_polygon(basis.u, basis.v, 180.0)
++
++    # Upright-upright and inverted-inverted: both live on the same basis, so
++    # any collision within one motif copy of itself rules the basis out.
++    for dx, dy in same_sublattice_vectors:
++        neighbour_upright = create_tree_polygon(dx, dy, 0.0)
++        if _collides(origin_upright, neighbour_upright, eps):
++            return False
++        neighbour_inverted = create_tree_polygon(basis.u + dx, basis.v + dy, 180.0)
++        if _collides(origin_inverted, neighbour_inverted, eps):
++            return False
++
++    # Upright-inverted: the inverted sublattice is the upright one shifted by
++    # (u, v). Its near neighbours to an upright tree at the origin are the
++    # lattice points L (integer combinations of a, b) for which (u, v) + L is
++    # short — i.e. lattice points near the target -(u, v), not near the
++    # origin. This is a different search from the self-neighbour case above
++    # and must not reuse the origin-centred enumeration: for a general
++    # (u, v), the lattice vectors that land close to the origin once shifted
++    # are not the same as the lattice vectors that are themselves short.
++    for dx, dy in lattice_points_near(a, b, target=(-basis.u, -basis.v), radius=_NEIGHBOUR_RADIUS):
++        candidate = create_tree_polygon(basis.u + dx, basis.v + dy, 180.0)
++        if _collides(origin_upright, candidate, eps):
++            return False
++
++    return True
++
++
++def lattice_points_near(
++    a: tuple[float, float],
++    b: tuple[float, float],
++    target: tuple[float, float],
++    radius: float,
++) -> list[tuple[float, float]]:
++    """Integer combinations ``n*a + m*b`` within ``radius`` of ``target``.
++
++    Bounds the search using the same row-sum technique as
++    ``geometry.neighbours``'s coefficient bound, but centred on an arbitrary
++    target rather than the origin, so it also finds lattice points that are
++    only close to the origin *after* being shifted by an offset such as
++    ``(u, v)`` — the case the self-neighbour enumeration cannot cover.
++    """
++    matrix = np.column_stack([np.asarray(a, dtype=float), np.asarray(b, dtype=float)])
++    inverse = np.linalg.inv(matrix)
++    target_coeffs = inverse @ np.asarray(target, dtype=float)
++    row_sums = np.sum(np.abs(inverse), axis=1)
++    bound = math.ceil(radius * float(np.max(row_sums))) + 1
++
++    points: list[tuple[float, float]] = []
++    n_center, m_center = round(target_coeffs[0]), round(target_coeffs[1])
++    for n in range(n_center - bound, n_center + bound + 1):
++        for m in range(m_center - bound, m_center + bound + 1):
++            x = n * a[0] + m * b[0]
++            y = n * a[1] + m * b[1]
++            if math.hypot(x - target[0], y - target[1]) < radius:
++                points.append((x, y))
++    return points
++
++
++def _collides(first: Polygon, second: Polygon, eps: float) -> bool:
++    # has_overlap treats exact touching as fine; require an explicit clearance
++    # margin instead by shrinking neither polygon and relying on the shared
++    # evaluator-faithful intersects/touches test, then rejecting anything
++    # closer than eps via distance as a second, independent check.
++    if has_overlap([first, second]):
++        return True
++    return bool(first.distance(second) < eps)
++
++
++def materialise_patch(basis: LatticeBasis, extent: int = 7) -> list[tuple[float, float, float]]:
++    """Materialise a finite ``extent`` x ``extent`` patch of both sublattices.
++
++    Returns ``(x, y, deg)`` placements, in unscaled problem units, suitable
++    for passing straight into ``reference.evaluator.create_tree_polygon``.
++    """
++    a, b = basis.vectors()
++    half = extent // 2
++    placements: list[tuple[float, float, float]] = []
++    for i in range(-half, half + 1):
++        for j in range(-half, half + 1):
++            x = i * a[0] + j * b[0]
++            y = i * a[1] + j * b[1]
++            placements.append((x, y, 0.0))
++            placements.append((x + basis.u, y + basis.v, 180.0))
++    return placements
+-- 
+2.43.0
+

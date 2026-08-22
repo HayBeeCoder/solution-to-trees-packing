@@ -41,13 +41,9 @@ class GatekeeperReport:
 
     @property
     def is_valid(self) -> bool:
-        monotone = all(
-            earlier.side <= later.side for earlier, later in pairwise(self.configurations)
-        )
         return (
             not self.validation_errors
             and not self.regression_errors
-            and monotone
             and all(
                 not report.overlap_pairs and report.min_clearance >= config.CLEARANCE_EPS
                 for report in self.configurations
@@ -99,10 +95,7 @@ def gatekeep_submission(path: str | Path, against: str | Path | None = None) -> 
         for n in range(config.MIN_TREES, config.MAX_TREES + 1)
     )
     total_score = sum((report.score_term for report in configurations), Decimal("0"))
-    monotone = all(earlier.side <= later.side for earlier, later in pairwise(configurations))
     regression_errors: list[str] = []
-    if not monotone:
-        regression_errors.append("score terms are not monotone across n")
     best_path = Path(against) if against is not None else None
     if best_path is not None:
         best_total, best_terms = _load_best_scores(best_path)

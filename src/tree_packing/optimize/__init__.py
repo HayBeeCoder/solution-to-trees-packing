@@ -24,12 +24,13 @@ from tree_packing.optimize.postprocess import (
     ratchet_layouts,
     rotate_layout,
 )
-from tree_packing.optimize.strategies import BaselineStrategy, TightGridStrategy
+from tree_packing.optimize.strategies import BaselineStrategy, LatticeStrategy, TightGridStrategy
 from tree_packing.optimize.types import Layout, Placement, StrategyResult
 
 __all__ = [
     "BaselineStrategy",
     "Budget",
+    "LatticeStrategy",
     "Layout",
     "LedgerEntry",
     "Placement",

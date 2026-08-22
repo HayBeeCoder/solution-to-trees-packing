@@ -118,15 +118,19 @@ def build_default_registry() -> StrategyRegistry:
     """Create the default strategy portfolio."""
     from tree_packing.optimize.strategies.baseline import BaselineStrategy
     from tree_packing.optimize.strategies.grid import TightGridStrategy
+    from tree_packing.optimize.strategies.lattice import LatticeStrategy
 
     registry = StrategyRegistry()
     registry.register(BaselineStrategy())
     registry.register(TightGridStrategy())
+    registry.register(LatticeStrategy())
+    registry.register(LatticeStrategy())
     return registry
 
 
 def solve_portfolio(ctx: SolveContext, registry: StrategyRegistry | None = None) -> StrategyResult:
     """Solve the configured range and apply the universal post-processes."""
+    from tree_packing.optimize.postprocess.fast_ratchet import fast_ratchet
     from tree_packing.optimize.postprocess.rotation import best_rotation
 
     active_registry = registry or build_default_registry()
@@ -137,7 +141,8 @@ def solve_portfolio(ctx: SolveContext, registry: StrategyRegistry | None = None)
             raise ValueError(f"No strategy produced a layout for n={n}")
         layouts.append(best_rotation(layout))
 
-    ratcheted = tuple(evaluate_layout(layout) for layout in layouts)
+    ratcheted_layouts = fast_ratchet(layouts)
+    ratcheted = tuple(evaluate_layout(layout) for layout in ratcheted_layouts)
     total_score = sum(
         (layout.score_term for layout in ratcheted if layout.score_term is not None),
         Decimal("0"),

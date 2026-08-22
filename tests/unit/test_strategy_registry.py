@@ -7,6 +7,7 @@ from tree_packing import config
 from tree_packing.baseline import build_baseline
 from tree_packing.optimize import (
     BaselineStrategy,
+    LatticeStrategy,
     SolveContext,
     TightGridStrategy,
     best_rotation,
@@ -20,9 +21,23 @@ from tree_packing.validation.gatekeeper import gatekeep_submission
 
 def test_default_registry_exposes_the_baseline_and_grid_portfolio() -> None:
     registry = build_default_registry()
-    assert registry.names() == ("baseline", "grid")
+    assert registry.names() == ("baseline", "grid", "lattice")
     assert isinstance(registry.selected(SolveContext())[0], BaselineStrategy)
     assert isinstance(registry.selected(SolveContext())[1], TightGridStrategy)
+    assert isinstance(registry.selected(SolveContext())[2], LatticeStrategy)
+
+
+def test_lattice_strategy_starts_at_m3_boundary() -> None:
+    strategy = LatticeStrategy()
+
+    assert strategy.solve(20, SolveContext()) is None
+    layout = strategy.solve(21, SolveContext())
+
+    assert layout is not None
+    assert len(layout.placements) == 21
+    evaluated = evaluate_layout(layout)
+    assert evaluated.min_clearance is not None
+    assert evaluated.min_clearance >= config.CLEARANCE_EPS
 
 
 def test_baseline_strategy_reproduces_the_reference_layout() -> None:
