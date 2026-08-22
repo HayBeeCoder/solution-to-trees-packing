@@ -17,7 +17,9 @@ solve:
 gatekeep:
 	uv run tree-packing gatekeep data/submissions/current.csv --against artifacts/best_scores.json
 
-verify: gate solve gatekeep
+verify: gate
+	uv run tree-packing solve --output data/submissions/current.csv --no-record
+	uv run tree-packing gatekeep data/submissions/current.csv --against artifacts/best_scores.json
 	uv run python reference/evaluator.py data/submissions/current.csv --quiet
 
 coverage:
