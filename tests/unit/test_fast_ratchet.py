@@ -33,9 +33,9 @@ def test_fast_box_side_matches_shapely(n: int) -> None:
     fast = fast_box_side(layout.placements)
     shapely = evaluate_layout(layout).side
     assert shapely is not None
-    assert abs(fast - shapely) < Decimal(
-        "1e-9"
-    ), f"n={n}: fast={fast} shapely={shapely} diff={abs(fast - shapely)}"
+    assert abs(fast - shapely) < Decimal("1e-9"), (
+        f"n={n}: fast={fast} shapely={shapely} diff={abs(fast - shapely)}"
+    )
 
 
 def test_fast_box_side_empty() -> None:
